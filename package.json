@@ -3,8 +3,11 @@
   "version": "1.0.0",
   "private": true,
   "main": "server.js",
-  "engines": { "node": ">=22.13" },
+  "engines": { "node": ">=20" },
   "scripts": {
-    "start": "node --disable-warning=ExperimentalWarning server.js"
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "@libsql/client": "^0.15.0"
   }
 }
