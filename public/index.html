@@ -1,0 +1,1143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Secondhand Atlas: Cebu | Used things with their stories</title>
+<meta name="description" content="A map of secondhand objects in Cebu City. Every item carries the story of the people who owned it. Pick one up, then add your chapter.">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@500;700;800&family=Newsreader:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#1D2B33; --muted:#586870; --tag:#F2B632; --accent:#2F4BD8;
+    --paper:#F7F6F1; --sand:#ECEADF; --line:#C8CEC0; --white:#fff;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  @media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+  body{margin:0;background:var(--paper);color:var(--ink);font:18px/1.6 'Newsreader',Georgia,serif}
+  h1,h2,h3,button,label,.brand,.links a{font-family:'Bricolage Grotesque',system-ui,sans-serif}
+  h1,h2,h3{margin:0;letter-spacing:-.02em;line-height:1.08}
+  p{margin:0}
+  a{color:var(--accent)}
+  section{scroll-margin-top:72px}
+  .container{max-width:1160px;margin:0 auto;padding:0 28px}
+  button{font-size:16px;cursor:pointer}
+  a:focus-visible,button:focus-visible,input:focus-visible,textarea:focus-visible{outline:3px solid var(--accent);outline-offset:3px}
+
+  /* buttons */
+  .primary{background:var(--ink);color:#fff;border:0;padding:12px 20px;border-radius:6px;font-weight:700;text-decoration:none;display:inline-block}
+  .primary:hover{background:#000}
+  .secondary{background:transparent;color:var(--ink);border:1.5px solid var(--ink);padding:11px 20px;border-radius:6px;font-weight:700;text-decoration:none;display:inline-block}
+  .secondary:hover{background:var(--ink);color:#fff}
+  .ghost{background:none;border:0;color:var(--accent);padding:6px 0;font-weight:500}
+  .danger{background:none;border:0;color:#B3261E;padding:6px 0;font-weight:500}
+
+  /* nav */
+  .nav{position:sticky;top:0;z-index:1000;background:rgba(247,246,241,.94);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+  .nav-in{max-width:1160px;margin:0 auto;padding:12px 28px;display:flex;align-items:center;gap:28px}
+  .brand{display:flex;align-items:center;gap:10px;font-weight:800;font-size:20px;letter-spacing:-.02em;color:var(--ink);text-decoration:none;margin-right:auto}
+  .mark{width:18px;height:22px;background:var(--tag);border:2.5px solid var(--ink);border-radius:5px 5px 5px 0;position:relative;display:inline-block}
+  .mark::after{content:"";position:absolute;left:50%;top:3px;width:4px;height:4px;margin-left:-2px;border-radius:50%;background:var(--ink)}
+  .links{display:flex;gap:26px}
+  .links a{color:var(--ink);text-decoration:none;font-weight:500;font-size:16px}
+  .links a:hover{color:var(--accent)}
+
+  /* account area in the nav */
+  .authnav{display:flex;align-items:center;gap:12px}
+  .authnav .hi{font:500 16px 'Bricolage Grotesque',system-ui,sans-serif;color:var(--ink)}
+  .authnav .primary,.authnav .secondary{padding:9px 16px;font-size:15px;font-family:'Bricolage Grotesque',system-ui,sans-serif;cursor:pointer}
+  @media (max-width:640px){.authnav .hi{display:none}}
+
+  /* hero */
+  .hero{padding:72px 0 84px}
+  .hero-grid{display:grid;grid-template-columns:1.05fr .95fr;gap:56px;align-items:center}
+  .hero h1{font-size:clamp(40px,6vw,68px);font-weight:800}
+  .hero .lead{font-size:21px;color:var(--muted);margin-top:22px;max-width:30em}
+  .hero .cta{display:flex;gap:14px;flex-wrap:wrap;margin-top:32px}
+
+  .tagcard{position:relative;background:var(--white);border:2px solid var(--ink);border-radius:14px;padding:46px 28px 26px;
+    transform:rotate(1.6deg);box-shadow:8px 8px 0 var(--tag);max-width:430px;justify-self:center}
+  .tagcard::before{content:"";position:absolute;top:16px;left:50%;width:16px;height:16px;margin-left:-8px;border-radius:50%;
+    background:var(--paper);border:2px solid var(--ink)}
+  .tagcard .eg{color:var(--muted);font-size:15px;margin-bottom:6px}
+  .tagcard h2{font-size:24px}
+  .tagcard .price{color:var(--muted);margin:2px 0 18px}
+  .mini{list-style:none;margin:0;padding:0 0 0 20px;border-left:2px dashed var(--ink)}
+  .mini li{position:relative;padding:0 0 14px 14px;font-size:16px;line-height:1.45}
+  .mini li:last-child{padding-bottom:0}
+  .mini li::before{content:attr(data-n);position:absolute;left:-33px;top:1px;width:22px;height:22px;border-radius:50%;
+    background:var(--tag);border:2px solid var(--ink);font:700 12px/18px 'Bricolage Grotesque',sans-serif;text-align:center}
+  .mini b{font-family:'Bricolage Grotesque',sans-serif}
+
+  /* sections */
+  .block{padding:84px 0}
+  .block.sand{background:var(--sand);border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+  .block h2{font-size:clamp(30px,4vw,44px);font-weight:800}
+  .block .sub{color:var(--muted);margin-top:12px;max-width:34em;font-size:20px}
+
+  .steps{display:grid;grid-template-columns:repeat(3,1fr);gap:40px;margin-top:48px;list-style:none;padding:0}
+  .steps li{border-top:3px solid var(--ink);padding-top:18px}
+  .steps h3{font-size:22px;margin-bottom:8px}
+  .steps .n{font:700 14px 'Bricolage Grotesque',sans-serif;background:var(--tag);border:2px solid var(--ink);
+    width:28px;height:28px;border-radius:50%;display:inline-grid;place-items:center;margin-bottom:12px}
+  .steps p{color:var(--muted)}
+
+  /* app */
+  .app{display:grid;grid-template-columns:minmax(0,1fr) 400px;margin-top:36px;border:2px solid var(--ink);border-radius:12px;overflow:hidden;background:var(--paper)}
+  #map{height:640px;background:#EEF0EE}
+  #map.picking{cursor:crosshair}
+  aside{padding:24px;border-left:2px solid var(--ink);height:640px;overflow:auto}
+  aside h3{font-size:24px;margin-bottom:4px}
+  .meta{margin:0 0 16px;color:var(--muted)}
+  .search{display:block;width:100%;margin:0 0 6px;padding:10px 12px;font:17px 'Newsreader',serif;border:1.5px solid var(--ink);border-radius:6px;background:#fff;color:var(--ink)}
+  .row{display:flex;gap:14px;align-items:center;margin-top:18px;flex-wrap:wrap}
+  .card{display:block;width:100%;text-align:left;background:none;border:0;border-top:1px solid var(--line);padding:14px 0;color:inherit}
+  .card:hover .cname{color:var(--accent)}
+  .cname{font-weight:700;font-size:19px;display:block;font-family:'Bricolage Grotesque',sans-serif}
+  .cwhere{color:var(--muted);font-size:16px}
+  .empty{color:var(--muted);padding:14px 0;border-top:1px solid var(--line)}
+  .chain{list-style:none;margin:0;padding:0 0 0 22px;border-left:2px dashed var(--ink)}
+  .chain li{position:relative;padding:0 0 20px 14px}
+  .chain li::before{content:attr(data-n);position:absolute;left:-36px;top:0;width:24px;height:24px;border-radius:50%;
+    background:var(--tag);border:2px solid var(--ink);font:700 13px/20px 'Bricolage Grotesque',sans-serif;text-align:center}
+  .who{font-family:'Bricolage Grotesque',sans-serif;font-weight:700}
+  .where{color:var(--muted);font-size:15px;margin-left:8px}
+  .chain p{margin:4px 0 0}
+  label{display:block;font-weight:500;font-size:15px;margin-top:14px}
+  input.field,textarea{display:block;width:100%;margin-top:5px;padding:9px 10px;font:17px 'Newsreader',serif;
+    border:1.5px solid var(--ink);border-radius:5px;background:#fff;color:var(--ink)}
+  textarea{min-height:110px;resize:vertical}
+  .status{margin:12px 0 0;font-weight:500;color:var(--accent)}
+  .err{color:#B3261E;margin:10px 0 0;min-height:1.4em}
+  .warn{margin:12px 0 0;padding:10px 14px;background:#FFF1C2;border:1px solid #E0C46A;border-radius:6px;font-size:16px}
+  .warn[hidden]{display:none}
+
+  /* object photos */
+  .photo{display:block;width:100%;max-height:260px;object-fit:cover;border:2px solid var(--ink);border-radius:10px;margin:0 0 14px}
+  .thumb{width:56px;height:56px;object-fit:cover;border-radius:8px;border:1.5px solid var(--ink);flex:none}
+  .cardrow{display:flex;gap:12px;align-items:center}
+  .file{display:block;width:100%;margin-top:5px;font:16px 'Newsreader',serif}
+  .preview{display:block;max-width:100%;max-height:180px;margin-top:8px;border:1.5px solid var(--ink);border-radius:8px}
+  .story .photo{margin:0;max-height:200px}
+
+  /* place search in the form */
+  .psearch{display:flex;gap:8px;margin-top:5px}
+  .psearch input.field{margin-top:0;flex:1;min-width:0}
+  .go{background:var(--ink);color:#fff;border:0;border-radius:5px;padding:0 16px;font-weight:700}
+  .go:hover{background:#000}
+  .results{margin:8px 0 0;border:1.5px solid var(--ink);border-radius:6px;background:#fff;overflow:hidden}
+  .results:empty{display:none}
+  .res{display:block;width:100%;text-align:left;background:none;border:0;border-bottom:1px solid var(--line);
+    padding:10px 12px;font:17px/1.35 'Newsreader',serif;color:var(--ink)}
+  .res:last-child{border-bottom:0}
+  .res:hover,.res:focus-visible{background:var(--sand)}
+  .res small{display:block;color:var(--muted);font-size:14px}
+  .resmsg{padding:10px 12px;color:var(--muted);font-size:16px}
+
+  /* map markers */
+  .tag-pin{width:26px;height:30px;background:var(--tag);border:2.5px solid var(--ink);border-radius:6px 6px 6px 0;
+    transform:translate(-13px,-30px);position:relative}
+  .tag-pin::after{content:"";position:absolute;left:50%;top:5px;width:6px;height:6px;margin-left:-3px;border-radius:50%;background:var(--ink)}
+  .tag-pin.sel{background:var(--ink)}
+  .tag-pin.sel::after{background:var(--tag)}
+  .num-pin{width:26px;height:26px;border-radius:50%;background:var(--tag);border:2.5px solid var(--ink);
+    font:700 14px/21px 'Bricolage Grotesque',sans-serif;text-align:center;transform:translate(-13px,-13px)}
+  .pick-pin{width:24px;height:24px;border-radius:50%;background:var(--accent);border:3px solid #fff;
+    box-shadow:0 0 0 2px var(--accent),0 2px 8px rgba(0,0,0,.35);transform:translate(-12px,-12px);cursor:grab}
+
+  /* readable map controls and labels */
+  .pin-label{font:700 14px 'Bricolage Grotesque',sans-serif;color:#1D2B33;background:#fff;border:1.5px solid #1D2B33;
+    border-radius:5px;padding:2px 8px;box-shadow:none}
+  .pin-label::before{display:none}
+  .pin-label.sel{background:#1D2B33;color:#fff}
+  .leaflet-control-zoom a{width:38px;height:38px;line-height:38px;font-size:20px}
+  .leaflet-control-layers{font:500 15px 'Bricolage Grotesque',sans-serif;border:2px solid #1D2B33;border-radius:8px}
+  .leaflet-control-layers-expanded{padding:8px 12px}
+
+  /* stories */
+  .stories{display:grid;grid-template-columns:repeat(3,1fr);gap:24px;margin-top:40px}
+  .story{background:var(--white);border:1.5px solid var(--ink);border-radius:12px;padding:24px;display:flex;flex-direction:column;gap:14px}
+  .story blockquote{margin:0;font-size:19px;line-height:1.5;font-style:italic}
+  .story .by{color:var(--muted);font-size:16px}
+  .story h3{font-size:18px}
+  .story .ghost{align-self:flex-start;margin-top:auto}
+  .nostories{grid-column:1 / -1;background:var(--white);border:1.5px dashed var(--ink);border-radius:12px;padding:32px;
+    display:flex;flex-direction:column;gap:14px;align-items:flex-start}
+  .nostories p{font-size:19px;max-width:30em}
+
+  /* about */
+  .about{display:grid;grid-template-columns:1fr 1fr;gap:56px;align-items:start}
+  .about .text p{margin-top:16px;color:var(--ink);max-width:34em}
+  .facts{list-style:none;margin:0;padding:0}
+  .facts li{padding:20px 0;border-top:1.5px solid var(--ink)}
+  .facts li:last-child{border-bottom:1.5px solid var(--ink)}
+  .facts h3{font-size:20px;margin-bottom:4px}
+  .facts p{color:var(--muted)}
+
+  /* footer */
+  footer{background:var(--ink);color:#E8ECEC;padding:56px 0 36px}
+  .foot{display:grid;grid-template-columns:1.4fr 1fr 1fr;gap:40px}
+  footer .brand{color:#fff;margin-bottom:12px}
+  footer p{color:#B9C4C8;max-width:24em}
+  footer h3{font-size:16px;color:#fff;margin-bottom:12px}
+  footer ul{list-style:none;margin:0;padding:0}
+  footer li{margin-bottom:8px}
+  footer a{color:#E8ECEC}
+  .legal{margin-top:40px;padding-top:20px;border-top:1px solid #3A4A53;color:#8FA0A6;font-size:15px}
+
+  @media (max-width:900px){
+    .hero-grid,.about{grid-template-columns:1fr}
+    .steps,.stories{grid-template-columns:1fr}
+    .app{grid-template-columns:1fr}
+    #map{height:420px}
+    aside{border-left:0;border-top:2px solid var(--ink);height:auto;max-height:none}
+    .foot{grid-template-columns:1fr}
+    .links{display:none}
+    .hero{padding:48px 0 56px}
+    .block{padding:56px 0}
+  }
+</style>
+<!-- Office look. Must stay after the style block above. -->
+<link rel="stylesheet" href="home-office.css">
+</head>
+<body id="top">
+
+<nav class="nav" aria-label="Main">
+  <div class="nav-in">
+    <a class="brand" href="#top"><span class="mark" aria-hidden="true"></span>Secondhand Atlas</a>
+    <div class="links">
+      <a href="#how">How it works</a>
+      <a href="#explore">Explore</a>
+      <a href="#stories">Stories</a>
+      <a href="#about">About</a>
+    </div>
+    <div class="authnav" id="authNav"></div>
+  </div>
+</nav>
+
+<header class="hero">
+  <div class="container hero-grid">
+    <div>
+      <h1>Buy a used thing. Inherit its story.</h1>
+      <p class="lead">Secondhand Atlas maps the chairs, bikes, and jackets of Cebu City. Each one carries the story of everyone who owned it, and the next owner adds a chapter.</p>
+      <div class="cta">
+        <a class="primary" href="#explore">Explore the map</a>
+        <button class="secondary" data-go="list">List an object</button>
+      </div>
+    </div>
+    <article class="tagcard" aria-label="Example of an object's story">
+      <p class="eg">An example of how a story grows</p>
+      <h2>Green rattan armchair</h2>
+      <p class="price">₱1,200, now near Fuente Osmeña</p>
+      <ol class="mini">
+        <li data-n="1"><b>Mara</b>, Carbon Market, 2014. Bought it from a vendor. Wrote a thesis in it.</li>
+        <li data-n="2"><b>Teo</b>, IT Park, 2020. First apartment. Best seat for afternoon sun.</li>
+        <li data-n="3"><b>Ines</b>, Fuente Osmeña, 2024. The only chair her cat agreed on.</li>
+      </ol>
+    </article>
+  </div>
+</header>
+
+<section class="block sand" id="how">
+  <div class="container">
+    <h2>How it works</h2>
+    <p class="sub">Three steps, and the object remembers all of them.</p>
+    <ol class="steps">
+      <li>
+        <span class="n" aria-hidden="true">1</span>
+        <h3>Pin it</h3>
+        <p>List something you no longer need. Search for your place, or click the map, to drop a pin where it has lived.</p>
+      </li>
+      <li>
+        <span class="n" aria-hidden="true">2</span>
+        <h3>Tell its story</h3>
+        <p>Write a few lines about what it has been through. A short, true story makes a used thing worth choosing over a new one.</p>
+      </li>
+      <li>
+        <span class="n" aria-hidden="true">3</span>
+        <h3>Pass it on</h3>
+        <p>When it finds a new home, you enter the new owner's email. They add their own chapter, and its journey grows on the map, one neighborhood at a time.</p>
+      </li>
+    </ol>
+  </div>
+</section>
+
+<section class="block" id="explore">
+  <div class="container">
+    <h2>Explore objects across Cebu</h2>
+    <p class="sub">Select a tag to follow its journey. Dashed lines show where it has been.</p>
+    <p class="warn" id="tilewarn" hidden>The map background could not load. Check your internet connection. Your pins still work.</p>
+    <div class="app">
+      <div id="map" role="application" aria-label="Map of Cebu City showing secondhand objects"></div>
+      <aside id="side" aria-live="polite"></aside>
+    </div>
+  </div>
+</section>
+
+<section class="block sand" id="stories">
+  <div class="container">
+    <h2>Latest chapters</h2>
+    <p class="sub">The newest stories added by owners across the city.</p>
+    <div class="stories" id="storyGrid"></div>
+  </div>
+</section>
+
+<section class="block" id="about">
+  <div class="container about">
+    <div class="text">
+      <h2>Cebu already knows the value of used things</h2>
+      <p>From the stalls of Carbon Market to the ukay-ukay racks near Colon, secondhand shopping is part of daily life here. Hand-me-downs and repairs are normal, and a good find is worth talking about.</p>
+      <p>Secondhand Atlas adds the part that is usually lost: who had it before you, and what it has done. We think that history is what makes an object worth keeping in circulation.</p>
+    </div>
+    <ul class="facts">
+      <li><h3>Local first</h3><p>Objects are listed by neighborhood, so pickups happen close to home.</p></li>
+      <li><h3>Story as proof</h3><p>Every item shows its full chain of owners, so you can see where it really comes from.</p></li>
+      <li><h3>Free items welcome</h3><p>Give something away for ₱0 and still pass its story on.</p></li>
+    </ul>
+  </div>
+</section>
+
+<footer>
+  <div class="container">
+    <div class="foot">
+      <div>
+        <a class="brand" href="#top"><span class="mark" aria-hidden="true"></span>Secondhand Atlas</a>
+        <p>A map of used things and the people who have loved them, starting in Cebu City.</p>
+      </div>
+      <div>
+        <h3>Explore</h3>
+        <ul>
+          <li><a href="#how">How it works</a></li>
+          <li><a href="#explore">Map</a></li>
+          <li><a href="#stories">Stories</a></li>
+        </ul>
+      </div>
+      <div>
+        <h3>Contact</h3>
+        <ul>
+          <li><a href="mailto:michaeljohnsilva5@gmail.com">michaeljohnsilva5@gmail.com</a></li>
+          <li>Cebu City, Philippines</li>
+        </ul>
+      </div>
+    </div>
+    <p class="legal">&copy; 2026 Secondhand Atlas. Map data from OpenStreetMap contributors, OpenFreeMap, and Esri.</p>
+  </div>
+</footer>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+<script src="https://unpkg.com/@maplibre/maplibre-gl-leaflet@0.0.22/leaflet-maplibre-gl.js"></script>
+<script src="auth.js"></script>
+<script>
+/* ---------- helpers ---------- */
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+/* ---------- area names (only used as a last-resort hint, never saved as the address) ---------- */
+const places = [
+  {name:'Colon',            lat:10.2956, lng:123.9013},
+  {name:'Carbon Market',    lat:10.2930, lng:123.8985},
+  {name:'Fuente Osmeña',    lat:10.3111, lng:123.8918},
+  {name:'Ayala Center',     lat:10.3181, lng:123.9049},
+  {name:'Cebu IT Park',     lat:10.3299, lng:123.9055},
+  {name:'Lahug',            lat:10.3270, lng:123.8990},
+  {name:'Mabolo',           lat:10.3190, lng:123.9120},
+  {name:'SM Seaside',       lat:10.2810, lng:123.8813},
+  {name:'Guadalupe',        lat:10.3290, lng:123.8870},
+  {name:'Banilad',          lat:10.3380, lng:123.9060},
+  {name:'Talamban',         lat:10.3570, lng:123.9170},
+  {name:'Capitol Site',     lat:10.3180, lng:123.8910},
+  {name:'Pardo',            lat:10.2790, lng:123.8560}
+];
+
+/* ---------- items live on the server (SQLite) ---------- */
+let items = [];
+async function loadItems(){
+  try{ items = (await Auth.call('GET', '/api/items')).items; }
+  catch(e){
+    items = [];
+    $('tilewarn').textContent = e.message;
+    $('tilewarn').hidden = false;
+  }
+}
+/* put a fresh copy of one item (from the server) into the local list */
+function upsertItem(item){
+  const i = items.findIndex(x => x.id === item.id);
+  if (i >= 0) items[i] = item; else items.push(item);
+}
+
+/* ---------- photos: shrink to a JPEG in the browser before uploading ---------- */
+function shrinkPhoto(file, maxSide = 1280, quality = 0.82){
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      const scale = Math.min(1, maxSide / Math.max(img.naturalWidth, img.naturalHeight));
+      const w = Math.max(1, Math.round(img.naturalWidth * scale));
+      const h = Math.max(1, Math.round(img.naturalHeight * scale));
+      const canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      const ctx = canvas.getContext('2d');
+      ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, w, h);   // fills see-through areas of PNGs
+      ctx.drawImage(img, 0, 0, w, h);
+      URL.revokeObjectURL(url);
+      resolve(canvas.toDataURL('image/jpeg', quality));
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error('That file could not be read as a picture. Try a JPG or PNG.'));
+    };
+    img.src = url;
+  });
+}
+
+async function onPhotoChosen(e){
+  const mine = form;                       // the form this choice belongs to
+  const input = e.target, file = input.files[0];
+  const box = $('photo-preview'), msg = $('photo-msg');
+  if (!mine) return;
+  mine.photo = null; box.innerHTML = ''; msg.textContent = '';
+  if (!file) return;
+  if (!file.type.startsWith('image/')){ msg.textContent = 'Choose a picture file.'; input.value = ''; return; }
+  if (file.size > 25 * 1024 * 1024){ msg.textContent = 'That picture is too big. Choose one under 25 MB.'; input.value = ''; return; }
+  try{
+    const data = await shrinkPhoto(file);
+    if (form !== mine) return;             // the person left the form meanwhile
+    mine.photo = data;
+    box.innerHTML = '<img class="preview" alt="Preview of your photo" src="' + data + '">';
+  }catch(err){
+    msg.textContent = err.message;
+    input.value = '';
+  }
+}
+
+/* ---------- map setup (centered on Cebu City) ---------- */
+const CEBU = [10.3157, 123.8854];
+const map = L.map('map', {minZoom:11}).setView(CEBU, 14);
+
+const esri = 'https://server.arcgisonline.com/ArcGIS/rest/services/';
+
+const satellite = L.layerGroup([
+  L.tileLayer(esri + 'World_Imagery/MapServer/tile/{z}/{y}/{x}',
+    {maxNativeZoom:18, maxZoom:19, attribution:'Imagery &copy; Esri'}),
+  L.tileLayer(esri + 'Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}',
+    {maxNativeZoom:18, maxZoom:19})
+]);
+const esriStreets = L.tileLayer(esri + 'World_Street_Map/MapServer/tile/{z}/{y}/{x}',
+  {maxNativeZoom:19, maxZoom:19, attribution:'Tiles &copy; Esri'});
+
+const ofmAttr = '<a href="https://openfreemap.org" target="_blank" rel="noopener">OpenFreeMap</a> &copy; <a href="https://www.openmaptiles.org/" target="_blank" rel="noopener">OpenMapTiles</a>, data from <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>';
+
+function vectorLayer(styleName){
+  if (typeof L.maplibreGL !== 'function') return null;
+  try{
+    return L.maplibreGL({style:'https://tiles.openfreemap.org/styles/' + styleName, attribution:ofmAttr});
+  }catch(e){ return null; }
+}
+
+const cleanMap  = vectorLayer('positron');   // calm, easy on the eyes
+const detailMap = vectorLayer('liberty');    // more colors and detail
+
+const baseMaps = {};
+if (cleanMap)  baseMaps['Clean']    = cleanMap;
+if (detailMap) baseMaps['Detailed'] = detailMap;
+if (!cleanMap) baseMaps['Streets']  = esriStreets;   // fallback if the new map cannot load
+baseMaps['Satellite'] = satellite;
+
+(cleanMap || esriStreets).addTo(map);
+L.control.layers(baseMaps, null, {position:'topright', collapsed:false}).addTo(map);
+
+esriStreets.on('tileerror', () => { $('tilewarn').hidden = false; });
+satellite.eachLayer(l => l.on('tileerror', () => { $('tilewarn').hidden = false; }));
+
+const pinLayer = L.layerGroup().addTo(map);
+const journeyLayer = L.layerGroup().addTo(map);
+const pickLayer = L.layerGroup().addTo(map);
+
+/* ---------- "you are here" pin ---------- */
+const meLayer = L.layerGroup().addTo(map);   // separate layer, so redrawing the object pins never removes it
+let meDot = null, meCircle = null, watchId = null;
+
+function showMe(lat, lng, acc){
+  if (!meDot){
+    meDot = L.marker([lat, lng], {
+      icon:L.divIcon({className:'', html:'<div class="me-pin"><span></span></div>', iconSize:[0,0]}),
+      interactive:false, keyboard:false, zIndexOffset:900
+    }).addTo(meLayer);
+    meDot.bindTooltip('You are here', {permanent:true, direction:'top', offset:[0,-14], className:'pin-label me-label'});
+    meCircle = L.circle([lat, lng], {radius:acc, color:'#0F6CBD', weight:1, fillColor:'#0F6CBD', fillOpacity:.12, interactive:false}).addTo(meLayer);
+  } else {
+    meDot.setLatLng([lat, lng]);
+    meCircle.setLatLng([lat, lng]);
+    meCircle.setRadius(acc);
+  }
+}
+
+function locationProblem(err){
+  return err && err.code === 1
+    ? 'Location is blocked. Allow location for this site in your browser settings, then try again.'
+    : 'Could not find your location. Check that location is turned on for your device.';
+}
+
+/* follows you while the page is open; center = move the map to you the first time */
+function locateMe(center){
+  if (!navigator.geolocation){ alert('Your browser cannot share your location.'); return; }
+  if (watchId !== null) navigator.geolocation.clearWatch(watchId);
+  let first = true;
+  watchId = navigator.geolocation.watchPosition(pos => {
+    const {latitude, longitude, accuracy} = pos.coords;
+    showMe(latitude, longitude, accuracy);
+    if (first && center) map.setView([latitude, longitude], Math.max(map.getZoom(), 16));
+    first = false;
+  }, err => {
+    navigator.geolocation.clearWatch(watchId); watchId = null;
+    if (center) alert(locationProblem(err));
+  }, {enableHighAccuracy:true, maximumAge:10000, timeout:15000});
+}
+
+/* the round button under the zoom buttons */
+const LocateControl = L.Control.extend({
+  options:{position:'topleft'},
+  onAdd(){
+    const box = L.DomUtil.create('div', 'leaflet-bar leaflet-control');
+    const a = L.DomUtil.create('a', 'locate-btn', box);
+    a.href = '#'; a.title = 'Show where I am';
+    a.setAttribute('role', 'button'); a.setAttribute('aria-label', 'Show where I am');
+    a.innerHTML = '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>';
+    L.DomEvent.disableClickPropagation(box);
+    L.DomEvent.on(a, 'click', e => { L.DomEvent.preventDefault(e); locateMe(true); });
+    return box;
+  }
+});
+new LocateControl().addTo(map);
+
+/* if the person already allowed location before, show the pin quietly with no pop-up */
+if (navigator.permissions && navigator.geolocation){
+  navigator.permissions.query({name:'geolocation'}).then(p => { if (p.state === 'granted') locateMe(false); }).catch(() => {});
+}
+
+/* in the form: put the object's pin where the person is standing */
+function useHere(){
+  if (!navigator.geolocation){ alert('Your browser cannot share your location.'); return; }
+  const say = t => { const s = $('status'); if (s) s.textContent = t; };
+  say('Finding your location...');
+  navigator.geolocation.getCurrentPosition(pos => {
+    if (view !== 'form' || !form) return;
+    const lat = pos.coords.latitude, lng = pos.coords.longitude;
+    map.setView([lat, lng], 17);
+    setPick(lat, lng, null);
+  }, err => say(locationProblem(err)), {enableHighAccuracy:true, timeout:15000});
+}
+
+/* ---------- place search (geocoding) ---------- */
+async function getJSON(url){
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 8000);
+  try{
+    const r = await fetch(url, {signal:ctrl.signal});
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    return await r.json();
+  } finally { clearTimeout(timer); }
+}
+
+const geocoders = [
+  // 1. Esri World Geocoder (no key needed for search)
+  async q => {
+    const url = 'https://geocode.arcgis.com/arcgis/rest/services/World/GeocodeServer/findAddressCandidates'
+      + '?f=json&maxLocations=6&countryCode=PHL&location=' + CEBU[1] + ',' + CEBU[0]
+      + '&SingleLine=' + encodeURIComponent(q);
+    const d = await getJSON(url);
+    return (d.candidates || []).map(c => {
+      const parts = String(c.address).split(',').map(s => s.trim()).filter(Boolean);
+      return {lat:c.location.y, lng:c.location.x, parts};
+    });
+  },
+  // 2. Photon (OpenStreetMap data), used if the first one fails
+  async q => {
+    const url = 'https://photon.komoot.io/api/?limit=6&lat=' + CEBU[0] + '&lon=' + CEBU[1]
+      + '&q=' + encodeURIComponent(q);
+    const d = await getJSON(url);
+    return (d.features || []).map(f => {
+      const p = f.properties || {};
+      const parts = [p.name, p.street, p.district || p.suburb, p.city || p.county, p.state]
+        .filter(Boolean).filter((v, i, a) => a.indexOf(v) === i);
+      return {lat:f.geometry.coordinates[1], lng:f.geometry.coordinates[0], parts};
+    });
+  }
+];
+
+async function geocode(q){
+  let anyWorked = false, out = [];
+  for (const g of geocoders){
+    try{
+      out = await g(q);
+      anyWorked = true;
+      if (out.length) break;
+    }catch(e){ /* try the next service */ }
+  }
+  if (!anyWorked) throw new Error('search unavailable');
+  return out
+    .filter(r => r.parts.length)
+    .map(r => ({
+      lat:r.lat, lng:r.lng,
+      title:r.parts[0],
+      sub:r.parts.slice(1, 3).join(', '),
+      label:r.parts.slice(0, 2).join(', ')
+    }));
+}
+
+/* ---------- exact address from a pin (reverse geocoding) ---------- */
+async function reverseGeocode(lat, lng){
+  const join = parts => parts.filter(Boolean).filter((v, i, a) => a.indexOf(v) === i).join(', ');
+
+  // 1. Esri (street address or street name at that exact point)
+  try{
+    const d = await getJSON('https://geocode.arcgis.com/arcgis/rest/services/World/GeocodeServer/reverseGeocode'
+      + '?f=json&featureTypes=PointAddress,StreetAddress,StreetInt,StreetName&location=' + lng + ',' + lat);
+    const a = d.address || {};
+    const label = join([a.Address || a.ShortLabel, a.Neighborhood || a.District || a.City]);
+    if (label) return label;
+  }catch(e){ /* try the next service */ }
+
+  // 2. Photon (OpenStreetMap data)
+  try{
+    const d = await getJSON('https://photon.komoot.io/reverse?lang=en&lat=' + lat + '&lon=' + lng);
+    const p = d.features && d.features[0] && d.features[0].properties;
+    if (p){
+      const first = p.street ? [p.housenumber, p.street].filter(Boolean).join(' ') : p.name;
+      const label = join([first, p.district || p.suburb || p.locality || p.city]);
+      if (label) return label;
+    }
+  }catch(e){ /* try the next service */ }
+
+  // 3. Nominatim (OpenStreetMap), last resort
+  try{
+    const d = await getJSON('https://nominatim.openstreetmap.org/reverse?format=jsonv2&zoom=18&addressdetails=1&accept-language=en&lat=' + lat + '&lon=' + lng);
+    const a = d.address || {};
+    const label = join([d.name || a.road, a.suburb || a.neighbourhood || a.quarter || a.city_district || a.village || a.city]);
+    if (label) return label;
+  }catch(e){}
+
+  return null;
+}
+
+let pickToken = 0;
+async function setPick(lat, lng, label){
+  form.pick = {lat, lng, label:label || null};
+  drawMap();
+  const say = t => { const s = $('status'); if (s) s.textContent = t; };
+  if (label){ say('Location set: ' + label + '.'); return; }
+
+  say('Finding the address...');
+  const mine = ++pickToken;
+  const found = await reverseGeocode(lat, lng);
+  if (mine !== pickToken || view !== 'form' || !form || !form.pick) return;
+  form.pick.label = found;
+  say(found
+    ? 'Location set: ' + found + '. Drag the pin to adjust.'
+    : 'Location set at ' + coordText(lat, lng) + '. Drag the pin to adjust.');
+}
+
+/* ---------- fixing old place names (display only, remembered in this browser) ---------- */
+const LABELS_KEY = 'secondhand-atlas-labels-v1';
+let labelCache = {};
+try{ labelCache = JSON.parse(localStorage.getItem(LABELS_KEY)) || {}; }catch(e){ labelCache = {}; }
+function saveLabels(){ try{ localStorage.setItem(LABELS_KEY, JSON.stringify(labelCache)); }catch(e){} }
+const keyOf = (lat, lng) => lat.toFixed(5) + ',' + lng.toFixed(5);
+
+const tried = new Set();
+let fixing = false;
+async function fixLabels(){
+  if (fixing) return;
+  fixing = true;
+  let changed = false;
+  try{
+    for (;;){
+      let target = null;
+      outer: for (const it of items){
+        for (const c of it.chapters){
+          const k = keyOf(c.lat, c.lng);
+          if (needsLookup(c.place) && !labelCache[k] && !tried.has(k)){ target = c; break outer; }
+        }
+      }
+      if (!target) break;
+      const k = keyOf(target.lat, target.lng);
+      tried.add(k);
+      const label = await reverseGeocode(target.lat, target.lng);
+      if (label){ labelCache[k] = label; changed = true; saveLabels(); }
+      await sleep(1100);   // be gentle with the free address services
+    }
+  } finally { fixing = false; }
+  if (changed){
+    if (view !== 'form') render();
+    renderStories();
+  }
+}
+
+let results = [];
+let searchToken = 0;
+
+async function runSearch(){
+  const input = $('f-search');
+  if (!input) return;
+  const text = input.value.trim();
+  const show = html => { const box = $('results'); if (box) box.innerHTML = html; };
+
+  if (text.length < 3){ show('<p class="resmsg">Type at least 3 letters.</p>'); return; }
+  const mine = ++searchToken;
+  show('<p class="resmsg">Searching...</p>');
+
+  let found;
+  try{ found = await geocode(text); }
+  catch(e){
+    if (mine !== searchToken) return;
+    show('<p class="resmsg">Search is not available right now. Click the map to place your object instead.</p>');
+    return;
+  }
+  if (mine !== searchToken) return;
+
+  results = found;
+  if (!found.length){
+    show('<p class="resmsg">No places found. Try a nearby landmark or barangay, or click the map.</p>');
+    return;
+  }
+  show(found.map((r, i) =>
+    `<button class="res" data-act="pickres" data-i="${i}">${esc(r.title)}${r.sub ? `<small>${esc(r.sub)}</small>` : ''}</button>`
+  ).join(''));
+}
+
+function pickResult(i){
+  const r = results[i];
+  if (!r || !form) return;
+  $('f-search').value = r.label;
+  $('results').innerHTML = '';
+  map.setView([r.lat, r.lng], 17);
+  setPick(r.lat, r.lng, r.label);
+}
+
+/* ---------- state ---------- */
+let view = 'browse';      // 'browse' | 'detail' | 'form'
+let selectedId = null;
+let form = null;          // { type:'list' | 'pass', id?:number, pick:{lat,lng,label?}|null, photo?:string|null }
+let query = '';
+
+const here = item => item.chapters[item.chapters.length - 1];
+const nearest = (lat, lng) => places.reduce((best, p) =>
+  Math.hypot(p.lat - lat, p.lng - lng) < Math.hypot(best.lat - lat, best.lng - lng) ? p : best).name;
+const coordText = (lat, lng) => lat.toFixed(5) + ', ' + lng.toFixed(5);
+
+/* a saved place name is "good" only if it is a real address, not a guess or raw coordinates */
+const isGuess = name => places.some(p => p.name === name);
+const isCoords = name => /^-?\d+\.\d+,\s*-?\d+\.\d+$/.test(String(name || '').trim());
+const needsLookup = name => !name || isGuess(name) || isCoords(name);
+const placeOf = c => {
+  if (!needsLookup(c.place)) return c.place;
+  return labelCache[keyOf(c.lat, c.lng)] || coordText(c.lat, c.lng);
+};
+
+const priceText = p => p === 0 ? 'Free' : '₱' + p.toLocaleString();
+const isAdmin = () => (Auth.user() || {}).role === 'admin';   // admins can only view
+
+/* ---------- map drawing ---------- */
+function drawMap(){
+  pinLayer.clearLayers();
+  journeyLayer.clearLayers();
+  pickLayer.clearLayers();
+
+  items.forEach(it => {
+    const c = here(it), sel = it.id === selectedId;
+    const icon = L.divIcon({className:'', html:`<div class="tag-pin ${sel ? 'sel' : ''}"></div>`, iconSize:[0,0]});
+    const m = L.marker([c.lat, c.lng], {icon, title:it.name, keyboard:true}).addTo(pinLayer);
+    m.bindTooltip(esc(it.name), {permanent:true, direction:'right', offset:[16,-16], className:'pin-label' + (sel ? ' sel' : '')});
+    m.on('click', () => { if (view !== 'form') openItem(it.id); });
+  });
+
+  const sel = items.find(i => i.id === selectedId);
+  if (sel && view !== 'form'){
+    const pts = sel.chapters.map(c => [c.lat, c.lng]);
+    L.polyline(pts, {color:'#1D2B33', weight:3, dashArray:'8 8'}).addTo(journeyLayer);
+    sel.chapters.forEach((c, i) => {
+      L.marker([c.lat, c.lng], {
+        icon:L.divIcon({className:'', html:`<div class="num-pin">${i + 1}</div>`, iconSize:[0,0]}),
+        interactive:false
+      }).addTo(journeyLayer);
+    });
+  }
+
+  if (view === 'form' && form.pick){
+    const pm = L.marker([form.pick.lat, form.pick.lng], {
+      draggable:true, keyboard:false, zIndexOffset:1000,
+      icon:L.divIcon({className:'', html:'<div class="pick-pin"></div>', iconSize:[0,0]})
+    }).addTo(pickLayer);
+    pm.on('dragend', () => { const ll = pm.getLatLng(); setPick(ll.lat, ll.lng, null); });
+  }
+  $('map').classList.toggle('picking', view === 'form');
+}
+
+/* ---------- sidebar views ---------- */
+function listHtml(){
+  if (!items.length){
+    return '<p class="empty">No objects yet. Be the first to list one and start its story.</p>';
+  }
+  const q = query.trim().toLowerCase();
+  const found = items.filter(it => {
+    const c = here(it);
+    return !q || it.name.toLowerCase().includes(q) || placeOf(c).toLowerCase().includes(q);
+  });
+  if (!found.length) return '<p class="empty">No objects match your search. Try a different word or area.</p>';
+  return found.map(it => {
+    const c = here(it);
+    return `<button class="card" data-act="open" data-id="${it.id}">
+      <span class="cardrow">
+        ${it.image ? `<img class="thumb" src="${esc(it.image)}" alt="">` : ''}
+        <span>
+          <span class="cname">${esc(it.name)}</span>
+          <span class="cwhere">${esc(placeOf(c))}, ${priceText(it.price)}, ${it.chapters.length} owner${it.chapters.length > 1 ? 's' : ''}${it.passedToYou ? '<br><b class="gift">Passed to you. Open it to add your chapter.</b>' : ''}</span>
+        </span>
+      </span>
+    </button>`;
+  }).join('');
+}
+
+function render(){
+  const side = $('side');
+  searchToken++;   // cancel any search still in flight
+
+  if (view === 'browse'){
+    side.innerHTML = `
+      <h3>Objects in Cebu</h3>
+      <p class="meta">Select one to follow its journey across the city.</p>
+      ${items.length ? `<input class="search" id="q" type="search" placeholder="Search by object or area" aria-label="Search objects" value="${esc(query)}">` : ''}
+      <div id="list">${listHtml()}</div>
+      ${isAdmin() ? '' : '<div class="row"><button class="primary" data-act="list">List an object</button></div>'}`;
+    const q = $('q');
+    if (q) q.addEventListener('input', e => { query = e.target.value; $('list').innerHTML = listHtml(); });
+  }
+
+  if (view === 'detail'){
+    const it = items.find(i => i.id === selectedId);
+    const c = here(it);
+    side.innerHTML = `
+      <button class="ghost" data-act="back">Back to all objects</button>
+      <h3>${esc(it.name)}</h3>
+      <p class="meta">${priceText(it.price)}, now in ${esc(placeOf(c))}</p>
+      ${it.image ? `<img class="photo" src="${esc(it.image)}" alt="Photo of ${esc(it.name)}">` : ''}
+      <ol class="chain">
+        ${it.chapters.map((ch, i) => `
+          <li data-n="${i + 1}">
+            <span class="who">${esc(ch.owner)}</span>
+            <span class="where">${esc(placeOf(ch))}, ${ch.year}</span>
+            <p>${esc(ch.story)}</p>
+          </li>`).join('')}
+      </ol>
+      ${ownerPanel(it)}
+      <div class="row">
+        ${canRemove(it) ? '<button class="danger" data-act="remove">Remove this object</button>' : ''}
+      </div>`;
+  }
+
+  if (view === 'form'){
+    const isList = form.type === 'list';
+    const it = isList ? null : items.find(i => i.id === form.id);
+    side.innerHTML = `
+      <h3>${isList ? 'List an object' : 'Add your chapter'}</h3>
+      <p class="meta">${isList ? 'Tell people what it is and where it has lived.' : esc(it.name)}</p>
+
+      <label for="f-search">Search your place</label>
+      <div class="psearch">
+        <input class="field" id="f-search" type="search" placeholder="Street, barangay, mall, or landmark" autocomplete="off">
+        <button class="go" data-act="search">Search</button>
+      </div>
+      <div class="results" id="results" aria-live="polite"></div>
+      <button class="ghost" data-act="usehere" type="button">Use my current location</button>
+      <p class="status" id="status">${form.pick ? 'Location set: ' + esc(form.pick.label || coordText(form.pick.lat, form.pick.lng)) + '.' : 'Search above, or click the map to place it. You can drag the pin to adjust.'}</p>
+
+      <p class="meta" style="margin-top:14px">Posting as <b>${esc((Auth.user() || {name:''}).name)}</b></p>
+      ${isList ? `
+        <label for="f-name">Object</label><input class="field" id="f-name" autocomplete="off">
+        <label for="f-price">Price in pesos (leave blank if free)</label><input class="field" id="f-price" inputmode="numeric" autocomplete="off">
+        <label for="f-photo">Photo of the object (optional)</label>
+        <input class="file" id="f-photo" type="file" accept="image/*">
+        <p class="err" id="photo-msg" style="min-height:0;margin-top:6px"></p>
+        <div id="photo-preview"></div>` : ''}
+      <label for="f-story">${isList ? 'Its story so far' : 'Your story with it'}</label>
+      <textarea id="f-story"></textarea>
+      <p class="err" id="err"></p>
+      <div class="row">
+        <button class="primary" data-act="submit">${isList ? 'Add to the map' : 'Add chapter'}</button>
+        <button class="ghost" data-act="cancel">Cancel</button>
+      </div>`;
+    $('f-search').addEventListener('keydown', e => {
+      if (e.key === 'Enter'){ e.preventDefault(); runSearch(); }
+    });
+    const ph = $('f-photo');
+    if (ph) ph.addEventListener('change', onPhotoChosen);
+  }
+  drawMap();
+}
+
+/* ---------- stories section ---------- */
+function renderStories(){
+  if (!items.length){
+    $('storyGrid').innerHTML = `
+      <div class="nostories">
+        <p>No chapters yet. The first object listed on the map will appear here with its story.</p>
+        ${isAdmin() ? '' : '<button class="primary" data-go="list">List the first object</button>'}
+      </div>`;
+    return;
+  }
+  const latest = items
+    .map(it => ({ it, ch: here(it) }))
+    .sort((a, b) => String(b.ch.createdAt).localeCompare(String(a.ch.createdAt)) || b.it.id - a.it.id)
+    .slice(0, 3);
+  $('storyGrid').innerHTML = latest.map(({it, ch}) => `
+    <article class="story">
+      ${it.image ? `<img class="photo" src="${esc(it.image)}" alt="Photo of ${esc(it.name)}">` : ''}
+      <h3>${esc(it.name)}</h3>
+      <blockquote>${esc(ch.story)}</blockquote>
+      <p class="by">${esc(ch.owner)}, ${esc(placeOf(ch))}, ${ch.year}</p>
+      <button class="ghost" data-story="${it.id}">See its journey</button>
+    </article>`).join('');
+}
+
+/* ---------- actions ---------- */
+function openItem(id){
+  selectedId = id; view = 'detail'; render();
+  const c = here(items.find(i => i.id === id));
+  map.panTo([c.lat, c.lng]);
+}
+
+/* ---------- accounts ---------- */
+function goLogin(){
+  location.href = 'login.html?next=' + encodeURIComponent('index.html#explore');
+}
+function needLogin(){
+  if (Auth.user()) return false;
+  goLogin();
+  return true;
+}
+
+/* only the current owner (or an admin) can remove an object */
+function canRemove(item){
+  const u = Auth.user();
+  if (!u) return false;
+  if (u.role === 'admin') return true;
+  return item.ownerId === u.id;
+}
+
+function renderAuthNav(){
+  const u = Auth.user();
+  $('authNav').innerHTML = u
+    ? `<span class="hi">Hi, ${esc(u.name.split(' ')[0])}</span>
+       ${u.role === 'admin' ? '<a class="secondary" href="admin.html">Accounts</a>' : ''}
+       <button class="secondary" id="logoutBtn">Log out</button>
+       ${u.role === 'admin' ? '' : '<button class="primary" data-go="list">List an object</button>'}`
+    : `<a class="secondary" href="login.html">Log in</a>
+       <a class="primary" href="register.html">Register</a>`;
+  const out = $('logoutBtn');
+  if (out) out.addEventListener('click', async () => { await Auth.logout(); location.reload(); });
+}
+
+/* ---------- passing an object on ---------- */
+const isOwner = it => { const u = Auth.user(); return !!u && u.role !== 'admin' && it.ownerId === u.id; };
+
+/* the box on an object's page: what each person is allowed to do */
+function ownerPanel(it){
+  if (isAdmin()) return '';
+  if (it.passedToYou){
+    return `<div class="owner-box"><b>This object was passed to you</b>
+      <p>Add your chapter to become its new owner.</p>
+      <button class="primary" data-act="pass">Add your chapter</button></div>`;
+  }
+  if (isOwner(it)){
+    if (it.passedOn){
+      return `<div class="owner-box"><b>Passed on</b>
+        <p>Waiting for ${esc(it.passedTo || 'the new owner')} to add their chapter.</p>
+        <button class="secondary" data-act="cancelpass">Cancel the transfer</button></div>`;
+    }
+    return `<div class="owner-box"><b>You own this object</b>
+      <p>Update its status. If you passed it on, enter the new owner's email.</p>
+      <label for="p-state">Status</label>
+      <select id="p-state">
+        <option value="no">Not passed, it is still with me</option>
+        <option value="yes">Passed on to a new owner</option>
+      </select>
+      <div id="p-fields" hidden>
+        <label for="p-email">New owner's email</label>
+        <input class="field" id="p-email" type="email" autocomplete="off">
+        <label for="p-email2">Type the email again</label>
+        <input class="field" id="p-email2" type="email" autocomplete="off">
+      </div>
+      <p class="status" id="p-msg" role="status"></p>
+      <button class="primary" data-act="savepass">Save status</button></div>`;
+  }
+  return '<p class="meta" style="margin-top:14px">' + (it.passedOn
+    ? 'This object was passed on. It is waiting for its new owner.'
+    : 'Only the current owner can pass this object on.') + '</p>';
+}
+
+async function savePass(){
+  const it = items.find(i => i.id === selectedId);
+  if (!it) return;
+  const say = (t, bad) => { const e = $('p-msg'); e.textContent = t; e.className = bad ? 'err' : 'status'; };
+  if ($('p-state').value !== 'yes'){ say('Status saved: the object is still with you.'); return; }
+  const email = $('p-email').value.trim().toLowerCase();
+  const confirmEmail = $('p-email2').value.trim().toLowerCase();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)){ say('Enter the new owner\'s email address.', true); return; }
+  if (email !== confirmEmail){ say('The two email addresses do not match.', true); return; }
+  if (!confirm('Pass "' + it.name + '" to ' + email + '? Only that person will be able to add the next chapter.')) return;
+  const btn = document.querySelector('[data-act="savepass"]');
+  btn.disabled = true;
+  try{
+    upsertItem((await Auth.call('POST', '/api/items/' + it.id + '/transfer', {email, confirmEmail})).item);
+    render();
+  }catch(e){
+    if (e.status === 401){ goLogin(); return; }
+    say(e.message, true);
+    btn.disabled = false;
+  }
+}
+
+async function cancelPass(){
+  const it = items.find(i => i.id === selectedId);
+  if (!it || !confirm('Cancel passing "' + it.name + '" on? It will stay with you.')) return;
+  try{
+    upsertItem((await Auth.call('DELETE', '/api/items/' + it.id + '/transfer')).item);
+    render();
+  }catch(e){
+    if (e.status === 401){ goLogin(); return; }
+    alert(e.message);
+  }
+}
+
+function startList(){
+  if (needLogin()) return;
+  if (isAdmin()) return;   // admins can only view
+  form = {type:'list', pick:null, photo:null}; view = 'form'; render();
+}
+
+async function removeItem(){
+  const it = items.find(i => i.id === selectedId);
+  if (!it || !confirm('Remove "' + it.name + '" and its whole story? This cannot be undone.')) return;
+  try{
+    await Auth.call('DELETE', '/api/items/' + it.id);
+    items = items.filter(i => i.id !== it.id);
+  }catch(e){
+    if (e.status === 401){ goLogin(); return; }   // login expired
+    if (e.status !== 404){ alert(e.message); return; }   // e.g. 403: not your object, so it stays
+    await loadItems();                                    // 404: already gone, refresh the list
+  }
+  selectedId = null;
+  view = 'browse';
+  render();
+  renderStories();
+}
+
+async function submit(){
+  const val = id => ($(id) ? $(id).value.trim() : '');
+  const me = Auth.user();
+  if (!me){ needLogin(); return; }
+  if (me.role === 'admin') return;   // admins can only view
+  const story = val('f-story');
+  const fail = msg => { $('err').textContent = msg; };
+
+  if (!form.pick) return fail('Search for your place or click the map to choose a location.');
+  if (!story)     return fail('Write a short story.');
+
+  const chapter = {
+    story,
+    lat:form.pick.lat, lng:form.pick.lng,
+    // the real address when we have it; otherwise the exact coordinates (never a guessed area name)
+    place:form.pick.label || coordText(form.pick.lat, form.pick.lng)
+  };
+
+  let url = '/api/items', body = chapter;
+  if (form.type === 'list'){
+    const name = val('f-name');
+    if (!name) return fail('Add the object\'s name.');
+    const price = val('f-price') === '' ? 0 : Number(val('f-price'));
+    if (Number.isNaN(price) || price < 0) return fail('Price must be a number.');
+    body = { name, price, chapter, image: form.photo || undefined };
+  } else {
+    url = '/api/items/' + form.id + '/chapters';
+  }
+
+  const btn = document.querySelector('[data-act="submit"]');
+  if (btn){ btn.disabled = true; btn.textContent = 'Saving...'; }
+  $('err').textContent = '';
+  try{
+    const saved = (await Auth.call('POST', url, body)).item;
+    upsertItem(saved);
+    selectedId = saved.id;
+  }catch(e){
+    if (e.status === 401){ goLogin(); return; }   // login expired
+    $('err').textContent = e.message;
+    if (btn){ btn.disabled = false; btn.textContent = form.type === 'list' ? 'Add to the map' : 'Add chapter'; }
+    return;
+  }
+  form = null;
+  view = 'detail';
+  render();
+  renderStories();
+  fixLabels();   // looks up the real address for display if only coordinates were saved
+}
+
+$('side').addEventListener('click', e => {
+  const btn = e.target.closest('[data-act]');
+  if (!btn) return;
+  const act = btn.dataset.act;
+  if (act === 'open')    openItem(Number(btn.dataset.id));
+  if (act === 'back')    { selectedId = null; view = 'browse'; render(); }
+  if (act === 'list')    startList();
+  if (act === 'pass')    { const it = items.find(i => i.id === selectedId); if (needLogin() || isAdmin() || !it || !it.passedToYou) return; form = {type:'pass', id:selectedId, pick:null}; view = 'form'; render(); }
+  if (act === 'savepass')   savePass();
+  if (act === 'cancelpass') cancelPass();
+  if (act === 'remove')  removeItem();
+  if (act === 'cancel')  { view = selectedId ? 'detail' : 'browse'; form = null; render(); }
+  if (act === 'submit')  submit();
+  if (act === 'search')  runSearch();
+  if (act === 'pickres') pickResult(Number(btn.dataset.i));
+  if (act === 'usehere') useHere();
+});
+
+/* show the email boxes only when "Passed on" is chosen */
+$('side').addEventListener('change', e => {
+  if (e.target.id === 'p-state') $('p-fields').hidden = e.target.value !== 'yes';
+});
+
+/* buttons outside the sidebar */
+document.addEventListener('click', e => {
+  const go = e.target.closest('[data-go="list"]');
+  if (go){
+    startList();
+    $('explore').scrollIntoView({behavior:'smooth'});
+    return;
+  }
+  const story = e.target.closest('[data-story]');
+  if (story){
+    openItem(Number(story.dataset.story));
+    $('explore').scrollIntoView({behavior:'smooth'});
+  }
+});
+
+/* clicking the map sets the location and finds its real address */
+map.on('click', e => {
+  if (view !== 'form') return;
+  setPick(e.latlng.lat, e.latlng.lng, null);
+});
+
+/* start: wait for the login check and the objects, then draw everything */
+Promise.all([Auth.ready, loadItems()]).then(() => {
+  renderAuthNav();
+  render();
+  renderStories();
+  fixLabels();   // corrects old objects whose place name was a guess
+});
+</script>
+</body>
+</html>

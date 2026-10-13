@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Forgot password | Secondhand Atlas</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@500;700;800&family=Newsreader:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="auth.css">
+</head>
+<body>
+
+<nav class="nav" aria-label="Main">
+  <div class="nav-in">
+    <a class="brand" href="index.html"><span class="mark" aria-hidden="true"></span>Secondhand Atlas</a>
+    <div class="links">
+      <a href="index.html#how">How it works</a>
+      <a href="index.html#explore">Explore</a>
+      <a href="index.html#stories">Stories</a>
+      <a href="index.html#about">About</a>
+    </div>
+    <a class="secondary" href="login.html">Log in</a>
+  </div>
+</nav>
+
+<main class="authwrap">
+  <section class="intro">
+    <h1>Forgot your password?</h1>
+    <p class="lead">Enter the email you registered with. If an account exists, we will send a link to choose a new password.</p>
+    <ul class="perks">
+      <li><b>The link works once</b><span>It stops working after you use it.</span></li>
+      <li><b>It expires quickly</b><span>Use it within an hour, or ask for a new one.</span></li>
+    </ul>
+  </section>
+
+  <section class="tag" aria-labelledby="title">
+    <h2 id="title">Reset password</h2>
+    <p class="sub">We will email you a reset link.</p>
+
+    <form id="form" novalidate>
+      <label for="email">Email</label>
+      <input id="email" type="email" autocomplete="email" required>
+      <p class="err" id="err" role="alert"></p>
+      <button class="primary wide" id="submit" type="submit">Send reset link</button>
+    </form>
+
+    <p class="alt" id="done" role="status" hidden></p>
+    <p class="alt">Remembered it? <a href="login.html">Log in</a></p>
+  </section>
+</main>
+
+<footer><div class="in">&copy; 2026 Secondhand Atlas. Cebu City, Philippines.</div></footer>
+
+<script src="auth.js"></script>
+<script>
+  const form = document.getElementById('form');
+  const err = document.getElementById('err');
+  const btn = document.getElementById('submit');
+  const done = document.getElementById('done');
+
+  form.addEventListener('submit', async e => {
+    e.preventDefault();
+    err.textContent = '';
+    const email = document.getElementById('email').value.trim();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)){ err.textContent = 'Enter a valid email address.'; return; }
+
+    btn.disabled = true; btn.textContent = 'Sending...';
+    try{
+      await Auth.call('POST', '/api/forgot-password', {email});
+      // Same message whether or not the account exists, so nobody can use this form to find out who is registered.
+      form.hidden = true;
+      done.hidden = false;
+      done.textContent = 'If that email has an account, we sent a reset link. Check your inbox and your spam folder.';
+    }catch(ex){
+      err.textContent = ex.message || 'Something went wrong. Please try again.';
+      btn.disabled = false; btn.textContent = 'Send reset link';
+    }
+  });
+</script>
+</body>
+</html>

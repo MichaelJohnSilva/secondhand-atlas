@@ -1,0 +1,117 @@
+/* home-office.css - load AFTER the <style> block in index.html. Restyles the home page in an Office look. */
+:root{
+  --ink:#242424; --muted:#616161; --tag:#0F6CBD; --accent:#0F6CBD;
+  --paper:#FFFFFF; --sand:#F5F5F5; --line:#E0E0E0; --white:#fff;
+  --font:'Segoe UI',system-ui,-apple-system,Roboto,'Helvetica Neue',Arial,sans-serif;
+}
+body,h1,h2,h3,button,label,.brand,.links a,.authnav .hi,.authnav .primary,.authnav .secondary,
+.cname,.who,.mini b,.perks b,.steps .n,.num-pin,.pin-label,.leaflet-control-layers{font-family:var(--font)}
+input.field,textarea,.search,.res,.file{font-family:var(--font);font-size:15px}
+body{font-size:15px;line-height:1.55}
+h1,h2,h3{font-weight:600;letter-spacing:0;line-height:1.2}
+a{text-decoration:none} a:hover{text-decoration:underline}
+:focus-visible{outline:2px solid var(--accent)!important;outline-offset:2px!important}
+
+/* buttons */
+.primary,.secondary{font:600 14px var(--font);padding:9px 18px;border-radius:4px}
+.primary{background:var(--accent);border:1px solid var(--accent)}
+.primary:hover{background:#115EA3;border-color:#115EA3;text-decoration:none}
+.primary[disabled]{opacity:.6;cursor:wait}
+.secondary{background:#fff;border:1px solid #BDBDBD;color:var(--ink)}
+.secondary:hover{background:#F5F5F5;color:var(--ink);text-decoration:none}
+.ghost{font-weight:600;font-size:14px} .danger{font-weight:600;font-size:14px;color:#B10E1C}
+.go{background:var(--accent);border-radius:4px}.go:hover{background:#115EA3}
+
+/* top bar */
+.nav{background:#fff;backdrop-filter:none}
+.brand{font-size:17px;font-weight:600;letter-spacing:0}
+.mark{width:22px;height:22px;background:var(--accent);border:0;border-radius:4px}
+.mark::after{left:6px;top:6px;width:10px;height:10px;margin:0;border:2px solid #fff;background:none}
+.links a{font-size:14px}
+.authnav .primary,.authnav .secondary{padding:7px 14px;font-size:14px}
+
+/* hero */
+.hero{background:linear-gradient(180deg,#EBF3FC 0,#fff 100%);padding:64px 0 72px;border-bottom:1px solid var(--line)}
+.hero h1{font-size:clamp(32px,5vw,48px);font-weight:600}
+.hero .lead{font-size:18px}
+.tagcard{transform:none;border:1px solid var(--line);border-top:4px solid var(--accent);border-radius:8px;
+  box-shadow:0 2px 4px rgba(0,0,0,.06),0 12px 32px rgba(0,0,0,.08);padding:28px}
+.tagcard::before{display:none}
+.tagcard h2{font-size:22px}
+.mini{border-left:2px solid #C7E0F4}
+.mini li{font-size:14px}
+.mini li::before{background:var(--accent);border:0;color:#fff;font-size:12px;line-height:22px}
+
+/* sections */
+.block{padding:64px 0}
+.block h2{font-size:clamp(26px,3.5vw,32px);font-weight:600}
+.block .sub{font-size:16px}
+.block.sand{background:var(--sand)}
+.steps li{border-top:3px solid var(--accent);background:#fff;padding:20px;border-left:1px solid var(--line);border-right:1px solid var(--line);border-bottom:1px solid var(--line);border-radius:0 0 8px 8px}
+.steps{gap:20px}
+.steps h3{font-size:18px}
+.steps .n{background:var(--accent);color:#fff;border:0}
+
+/* map app */
+.app{border:1px solid var(--line);border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,.06);background:#fff}
+aside{border-left:1px solid var(--line)}
+aside h3{font-size:20px}
+.search,input.field,textarea{border:1px solid #8A8886;border-radius:4px;padding:8px 10px}
+.search:focus,input.field:focus,textarea:focus{outline:0;border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
+label{font-weight:600;font-size:14px}
+.card{border-top:1px solid var(--line)}
+.card:hover{background:#F5F9FD}
+.cname{font-size:15px;font-weight:600}
+.chain{border-left:2px solid #C7E0F4}
+.chain li::before{background:var(--accent);border:0;color:#fff;font-size:12px;line-height:24px}
+.photo,.thumb,.preview{border:1px solid var(--line);border-radius:6px}
+.results{border:1px solid #8A8886;border-radius:4px}
+.res:hover,.res:focus-visible{background:#EBF3FC}
+.warn{background:#FFF4CE;border:1px solid #E8D58A;border-radius:4px}
+.status{color:var(--accent);font-size:14px}
+
+/* owner / transfer box */
+.owner-box{margin-top:16px;padding:14px 16px;background:#F5F9FD;border:1px solid #C7E0F4;border-radius:6px}
+.owner-box p{margin:4px 0 10px;color:var(--muted);font-size:14px}
+.owner-box select{display:block;width:100%;padding:8px 10px;border:1px solid #8A8886;border-radius:4px;font:15px var(--font);background:#fff;margin-bottom:6px}
+.gift{color:var(--accent);font-weight:600;font-size:14px}
+
+/* map markers and controls */
+.tag-pin{background:var(--accent);border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.4)}
+.tag-pin::after{background:#fff}
+.tag-pin.sel{background:#242424}.tag-pin.sel::after{background:#fff}
+.num-pin{background:var(--accent);color:#fff;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.4);line-height:22px}
+.pin-label{border:1px solid #BDBDBD;border-radius:4px;font-size:13px;box-shadow:0 1px 3px rgba(0,0,0,.2)}
+.pin-label.sel{background:var(--accent);border-color:var(--accent)}
+.leaflet-control-layers{border:1px solid #BDBDBD;border-radius:6px;font-size:14px}
+
+/* "you are here" pin and locate button */
+.me-pin{position:relative;width:18px;height:18px;transform:translate(-9px,-9px)}
+.me-pin span{position:absolute;inset:0;border-radius:50%;background:#0F6CBD;border:3px solid #fff;
+  box-shadow:0 0 0 1px rgba(0,0,0,.25),0 2px 6px rgba(0,0,0,.35)}
+.me-pin::before{content:"";position:absolute;inset:-8px;border-radius:50%;background:rgba(15,108,189,.25);animation:mepulse 2s ease-out infinite}
+@keyframes mepulse{0%{transform:scale(.5);opacity:1}100%{transform:scale(1.4);opacity:0}}
+@media (prefers-reduced-motion:reduce){.me-pin::before{animation:none}}
+.me-label{background:#0F6CBD;border-color:#0F6CBD;color:#fff}
+.leaflet-bar a.locate-btn{width:38px;height:38px;display:flex;align-items:center;justify-content:center;color:#242424}
+.leaflet-bar a.locate-btn:hover{color:var(--accent)}
+
+/* stories */
+.story{border:1px solid var(--line);border-top:3px solid var(--accent);border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,.05)}
+.story blockquote{font-size:16px;font-style:normal;line-height:1.55}
+.story .by{font-size:14px}
+.nostories{border:1px dashed #BDBDBD;border-radius:8px}
+.nostories p{font-size:16px}
+
+/* about */
+.facts li{border-top:1px solid var(--line)}
+.facts li:last-child{border-bottom:1px solid var(--line)}
+.facts h3{font-size:17px}
+
+/* footer */
+footer{background:#F5F5F5;border-top:1px solid var(--line);color:var(--ink);padding:44px 0 28px}
+footer .brand{color:var(--ink)}
+footer p{color:var(--muted)}
+footer h3{color:var(--ink);font-size:14px}
+footer a{color:var(--accent)}
+.legal{border-top:1px solid var(--line);color:var(--muted)}

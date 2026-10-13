@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Admin | Secondhand Atlas</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@500;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#1D2B33; --muted:#6A7880; --tag:#F2B632; --accent:#2F4BD8;
+    --bg:#F3F4F0; --card:#fff; --line:#E1E4DC; --soft:#F7F8F4; --danger:#B3261E;
+    --radius:12px; --shadow:0 1px 2px rgba(29,43,51,.06),0 4px 14px rgba(29,43,51,.05);
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 system-ui,-apple-system,'Segoe UI',sans-serif}
+  h1,h2,h3,.brand{font-family:'Bricolage Grotesque',system-ui,sans-serif;letter-spacing:-.02em;margin:0}
+  button{font:inherit;cursor:pointer}
+  :focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+
+  /* top bar */
+  .bar{position:sticky;top:0;z-index:20;background:var(--ink);color:#fff}
+  .bar-in{max-width:1120px;margin:0 auto;padding:12px 20px;display:flex;align-items:center;gap:14px}
+  .brand{display:flex;align-items:center;gap:10px;font-weight:800;font-size:18px;margin-right:auto}
+  .mark{width:16px;height:20px;background:var(--tag);border:2.5px solid #fff;border-radius:5px 5px 5px 0;display:inline-block}
+  .pill{font:700 11px 'Bricolage Grotesque',sans-serif;letter-spacing:.06em;text-transform:uppercase;background:var(--tag);color:var(--ink);padding:3px 8px;border-radius:999px}
+  .who{color:#C9D3D7;font-size:14px}
+  .btn{display:inline-flex;align-items:center;gap:8px;border:1.5px solid var(--line);background:#fff;color:var(--ink);
+    padding:8px 14px;border-radius:8px;font-weight:600;font-size:14px;text-decoration:none}
+  .btn:hover{background:var(--soft)}
+  .bar .btn{background:transparent;color:#fff;border-color:#4A5B64}
+  .bar .btn:hover{background:#2A3B44}
+  .btn.danger{color:var(--danger);border-color:#E9C3C0}
+  .btn.danger:hover{background:var(--danger);color:#fff;border-color:var(--danger)}
+  .btn.solid{background:var(--ink);color:#fff;border-color:var(--ink)}
+  .btn.solid:hover{background:#000}
+  .btn.sm{padding:6px 11px;font-size:13px}
+
+  .wrap{max-width:1120px;margin:0 auto;padding:28px 20px 60px}
+  .head{margin-bottom:20px}
+  .head h1{font-size:28px;font-weight:800}
+  .head p{color:var(--muted);margin:4px 0 0}
+
+  /* stat cards */
+  .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:22px}
+  .stat{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:18px;display:flex;gap:14px;align-items:center;box-shadow:var(--shadow)}
+  .ico{width:42px;height:42px;border-radius:10px;display:grid;place-items:center;flex:none}
+  .ico svg{width:22px;height:22px}
+  .i1{background:#E8ECFB;color:var(--accent)} .i2{background:#FDF3D6;color:#9A6B00} .i3{background:#E3F4EA;color:#1E7A47}
+  .stat b{display:block;font:800 26px/1.1 'Bricolage Grotesque',sans-serif}
+  .stat span{color:var(--muted);font-size:13px}
+
+  /* panel + toolbar */
+  .panel{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden}
+  .tools{display:flex;gap:10px;flex-wrap:wrap;padding:14px;border-bottom:1px solid var(--line)}
+  .search{flex:1;min-width:200px;position:relative}
+  .search svg{position:absolute;left:11px;top:50%;transform:translateY(-50%);width:17px;height:17px;color:var(--muted)}
+  .search input{width:100%;padding:9px 12px 9px 36px;border:1.5px solid var(--line);border-radius:8px;font:inherit;background:var(--soft)}
+  .search input:focus{background:#fff;border-color:var(--accent);outline:0}
+  select{padding:9px 12px;border:1.5px solid var(--line);border-radius:8px;font:inherit;background:var(--soft)}
+
+  /* table */
+  .scroll{overflow-x:auto}
+  table{border-collapse:collapse;width:100%}
+  th,td{text-align:left;padding:12px 16px;border-bottom:1px solid var(--line);white-space:nowrap;vertical-align:middle}
+  td.wrapcell{white-space:normal;min-width:220px}
+  th{font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);background:var(--soft);font-weight:700}
+  tbody tr:last-child td{border-bottom:0}
+  tbody tr:hover{background:#FBFBF8}
+  .user{display:flex;align-items:center;gap:12px}
+  .av{width:36px;height:36px;border-radius:50%;display:grid;place-items:center;color:#fff;font:700 14px 'Bricolage Grotesque',sans-serif;flex:none}
+  .user b{display:block;font-weight:600}
+  .user small{color:var(--muted)}
+  .num{display:inline-block;min-width:28px;text-align:center;background:var(--soft);border:1px solid var(--line);border-radius:999px;padding:1px 10px;font-weight:600;font-size:13px}
+  .acts{display:flex;gap:8px;justify-content:flex-end}
+  .empty{padding:44px 16px;text-align:center;color:var(--muted)}
+  .foot{padding:12px 16px;color:var(--muted);font-size:13px;border-top:1px solid var(--line);background:var(--soft)}
+
+  /* drawer */
+  .veil{position:fixed;inset:0;background:rgba(20,30,36,.45);opacity:0;pointer-events:none;transition:opacity .2s;z-index:40}
+  .veil.on{opacity:1;pointer-events:auto}
+  .drawer{position:fixed;top:0;right:0;bottom:0;width:min(600px,100%);background:var(--card);z-index:50;transform:translateX(100%);
+    transition:transform .25s ease;display:flex;flex-direction:column;box-shadow:-8px 0 30px rgba(0,0,0,.15)}
+  .drawer.on{transform:none}
+  .d-head{padding:20px;border-bottom:1px solid var(--line);display:flex;gap:14px;align-items:center}
+  .d-head .av{width:48px;height:48px;font-size:18px}
+  .d-head h2{font-size:20px}
+  .d-head p{margin:0;color:var(--muted);font-size:14px}
+  .d-head .x{margin-left:auto;border:0;background:var(--soft);width:36px;height:36px;border-radius:8px;font-size:20px;line-height:1}
+  .d-sum{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;padding:16px 20px 0}
+  .d-sum div{background:var(--soft);border:1px solid var(--line);border-radius:10px;padding:10px 12px}
+  .d-sum b{display:block;font:800 20px 'Bricolage Grotesque',sans-serif}
+  .d-sum span{color:var(--muted);font-size:12px}
+  .tabs{display:flex;gap:4px;padding:14px 20px 0;border-bottom:1px solid var(--line)}
+  .tab{border:0;background:none;padding:9px 14px;font-weight:600;color:var(--muted);border-bottom:3px solid transparent;margin-bottom:-1px}
+  .tab.on{color:var(--ink);border-color:var(--tag)}
+  .d-body{padding:18px 20px;overflow:auto;flex:1}
+
+  /* timeline */
+  .tl{list-style:none;margin:0;padding:0 0 0 18px;border-left:2px solid var(--line)}
+  .tl li{position:relative;padding:0 0 18px 16px}
+  .tl li::before{content:"";position:absolute;left:-26px;top:5px;width:12px;height:12px;border-radius:50%;background:#fff;border:3px solid var(--c,#9AA7AD)}
+  .tl .t{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .tag{font:700 11px 'Bricolage Grotesque',sans-serif;letter-spacing:.04em;text-transform:uppercase;padding:2px 8px;border-radius:999px;background:var(--soft);border:1px solid var(--line)}
+  .tl small{color:var(--muted)}
+  .tl p{margin:3px 0 0;color:#3B4A52;font-size:14px;word-break:break-word}
+  .card{border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin-bottom:10px}
+  .card b{font-weight:600}
+  .card small{color:var(--muted);display:block}
+  .card p{margin:6px 0 0;font-size:14px;color:#3B4A52}
+  .none{color:var(--muted);text-align:center;padding:30px 0}
+
+  /* modal + toast */
+  .modal{position:fixed;inset:0;display:none;place-items:center;background:rgba(20,30,36,.5);z-index:70;padding:16px}
+  .modal.on{display:grid}
+  .dlg{background:#fff;border-radius:14px;padding:24px;max-width:420px;width:100%;box-shadow:0 20px 50px rgba(0,0,0,.3)}
+  .dlg h3{font-size:20px;margin-bottom:8px}
+  .dlg p{margin:0 0 20px;color:#3B4A52}
+  .dlg .row{display:flex;gap:10px;justify-content:flex-end}
+  .btn.fill-danger{background:var(--danger);color:#fff;border-color:var(--danger)}
+  .toast{position:fixed;left:50%;bottom:24px;transform:translate(-50%,20px);background:var(--ink);color:#fff;padding:11px 18px;border-radius:10px;
+    opacity:0;pointer-events:none;transition:.25s;z-index:80;font-weight:500}
+  .toast.on{opacity:1;transform:translate(-50%,0)}
+  .toast.bad{background:var(--danger)}
+
+  /* phones: table rows become cards */
+  @media (max-width:720px){
+    .stats{grid-template-columns:1fr}
+    .who{display:none}
+    thead{display:none}
+    table,tbody,tr,td{display:block;width:100%}
+    tbody tr{padding:14px 16px;border-bottom:1px solid var(--line)}
+    td{border:0;padding:4px 0;white-space:normal}
+    td[data-l]::before{content:attr(data-l);display:inline-block;min-width:84px;color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.04em}
+    td.who-c{padding-bottom:8px}
+    .acts{justify-content:flex-start;margin-top:8px}
+    .d-sum{grid-template-columns:repeat(3,1fr)}
+  }
+</style>
+<!-- NEW LINE: Office look. Must stay after the style block above. -->
+<link rel="stylesheet" href="admin-office.css">
+</head>
+<body>
+
+<div class="bar">
+  <div class="bar-in">
+    <div class="brand"><span class="mark" aria-hidden="true"></span>Secondhand Atlas <span class="pill">Admin</span></div>
+    <span class="who" id="who"></span>
+    <a class="btn sm" href="index.html">Back to site</a>
+    <button class="btn sm" id="logout">Log out</button>
+  </div>
+</div>
+
+<main class="wrap">
+  <div class="head">
+    <h1>Accounts</h1>
+    <p>Manage registered users and review what they have done on the site.</p>
+  </div>
+
+  <div class="stats" id="stats"></div>
+
+  <section class="panel">
+    <div class="tools">
+      <label class="search">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+        <input id="q" type="search" placeholder="Search by name or email" aria-label="Search accounts">
+      </label>
+      <select id="sort" aria-label="Sort accounts">
+        <option value="new">Newest first</option>
+        <option value="name">Name A to Z</option>
+        <option value="items">Most objects</option>
+        <option value="chapters">Most chapters</option>
+      </select>
+    </div>
+    <div class="scroll">
+      <table>
+        <thead><tr><th>User</th><th>Objects</th><th>Chapters</th><th>Joined</th><th></th></tr></thead>
+        <tbody id="rows"><tr><td colspan="5" class="empty">Loading...</td></tr></tbody>
+      </table>
+    </div>
+    <div class="foot" id="count"></div>
+  </section>
+</main>
+
+<div class="veil" id="veil"></div>
+<aside class="drawer" id="drawer" aria-label="User history" aria-hidden="true"></aside>
+
+<div class="modal" id="modal" role="dialog" aria-modal="true">
+  <div class="dlg">
+    <h3 id="m-title"></h3>
+    <p id="m-text"></p>
+    <div class="row">
+      <button class="btn" id="m-no">Cancel</button>
+      <button class="btn fill-danger" id="m-yes">Delete</button>
+    </div>
+  </div>
+</div>
+<div class="toast" id="toast" role="status"></div>
+
+<script src="auth.js"></script>
+<script>
+const $ = id => document.getElementById(id);
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const parse = s => { const d = new Date(s); return isNaN(d) ? null : d; };
+const when = s => { const d = parse(s); return d ? d.toLocaleString([], {dateStyle:'medium', timeStyle:'short'}) : String(s || ''); };
+const day = s => { const d = parse(s); return d ? d.toLocaleDateString([], {dateStyle:'medium'}) : ''; };
+function ago(s){
+  const d = parse(s); if (!d) return '';
+  const sec = Math.round((Date.now() - d) / 1000);
+  if (sec < 60) return 'just now';
+  if (sec < 3600) return Math.floor(sec / 60) + ' min ago';
+  if (sec < 86400) return Math.floor(sec / 3600) + ' h ago';
+  if (sec < 2592000) return Math.floor(sec / 86400) + ' d ago';
+  return day(s);
+}
+const COLORS = ['#2F4BD8','#1E7A47','#9A6B00','#8B3FA8','#C2410C','#0E7490','#BE185D'];
+const colorOf = s => COLORS[[...String(s)].reduce((n, c) => n + c.charCodeAt(0), 0) % COLORS.length];
+const initials = n => String(n).trim().split(/\s+/).slice(0, 2).map(w => w[0]).join('').toUpperCase() || '?';
+const avatar = u => `<span class="av" style="background:${colorOf(u.name)}">${esc(initials(u.name))}</span>`;
+const peso = p => p === 0 ? 'Free' : '₱' + Number(p).toLocaleString();
+
+const svg = {
+  users:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8"/></svg>',
+  box:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8 12 3 3 8v8l9 5 9-5z"/><path d="m3 8 9 5 9-5M12 13v8"/></svg>',
+  book:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V3H6.5A2.5 2.5 0 0 0 4 5.5z"/><path d="M4 19.5A2.5 2.5 0 0 0 6.5 22H20v-5"/></svg>'
+};
+
+let users = [];
+
+/* ---------- toast + confirm ---------- */
+let toastTimer;
+function toast(msg, bad){
+  const t = $('toast');
+  t.textContent = msg; t.className = 'toast on' + (bad ? ' bad' : '');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { t.className = 'toast'; }, 3200);
+}
+function confirmBox(title, text, yes){
+  return new Promise(resolve => {
+    $('m-title').textContent = title; $('m-text').textContent = text; $('m-yes').textContent = yes;
+    $('modal').classList.add('on'); $('m-no').focus();
+    const done = v => { $('modal').classList.remove('on'); $('m-yes').onclick = $('m-no').onclick = null; resolve(v); };
+    $('m-yes').onclick = () => done(true);
+    $('m-no').onclick = () => done(false);
+  });
+}
+
+/* ---------- list ---------- */
+async function load(){
+  try{
+    users = (await Auth.call('GET', '/api/admin/users')).users;
+    renderStats();
+    renderRows();
+  }catch(e){
+    if (e.status === 401 || e.status === 403){ location.href = 'index.html'; return; }
+    $('rows').innerHTML = '<tr><td colspan="5" class="empty">' + esc(e.message) + '</td></tr>';
+  }
+}
+
+function renderStats(){
+  const items = users.reduce((n, u) => n + u.items, 0);
+  const ch = users.reduce((n, u) => n + u.chapters, 0);
+  const card = (cls, icon, n, label) => `<div class="stat"><div class="ico ${cls}">${icon}</div><div><b>${n}</b><span>${label}</span></div></div>`;
+  $('stats').innerHTML = card('i1', svg.users, users.length, 'Registered accounts')
+    + card('i2', svg.box, items, 'Objects listed')
+    + card('i3', svg.book, ch, 'Chapters written');
+}
+
+function renderRows(){
+  const q = $('q').value.trim().toLowerCase();
+  const sort = $('sort').value;
+  let list = users.filter(u => !q || u.name.toLowerCase().includes(q) || u.email.toLowerCase().includes(q));
+  list.sort((a, b) =>
+    sort === 'name' ? a.name.localeCompare(b.name) :
+    sort === 'items' ? b.items - a.items :
+    sort === 'chapters' ? b.chapters - a.chapters :
+    String(b.created_at).localeCompare(String(a.created_at)));
+
+  $('rows').innerHTML = list.length ? list.map(u => `
+    <tr>
+      <td class="who-c"><div class="user">${avatar(u)}<div><b>${esc(u.name)}</b><small>${esc(u.email)}</small></div></div></td>
+      <td data-l="Objects"><span class="num">${u.items}</span></td>
+      <td data-l="Chapters"><span class="num">${u.chapters}</span></td>
+      <td data-l="Joined">${esc(day(u.created_at))}</td>
+      <td><div class="acts">
+        <button class="btn sm" data-hist="${esc(u.id)}">View history</button>
+        <button class="btn sm danger" data-del="${esc(u.id)}">Delete</button>
+      </div></td>
+    </tr>`).join('')
+    : '<tr><td colspan="5" class="empty">' + (users.length ? 'No accounts match your search.' : 'No one has registered yet.') + '</td></tr>';
+  $('count').textContent = 'Showing ' + list.length + ' of ' + users.length + ' account' + (users.length === 1 ? '' : 's');
+}
+
+/* ---------- history drawer ---------- */
+const ACTION_COLOR = {
+  'NEW ACCOUNT':'#2F4BD8', 'LOGIN':'#1E7A47', 'LOGOUT':'#9AA7AD',
+  'OBJECT LISTED':'#C98A00', 'CHAPTER ADDED':'#8B3FA8', 'OBJECT REMOVED':'#B3261E'
+};
+let hist = null, tab = 'activity';
+
+function openDrawer(){ $('veil').classList.add('on'); $('drawer').classList.add('on'); $('drawer').setAttribute('aria-hidden', 'false'); }
+function closeDrawer(){ $('veil').classList.remove('on'); $('drawer').classList.remove('on'); $('drawer').setAttribute('aria-hidden', 'true'); hist = null; }
+
+async function showHistory(id){
+  openDrawer();
+  $('drawer').innerHTML = '<div class="d-body"><p class="none">Loading history...</p></div>';
+  try{
+    hist = await Auth.call('GET', '/api/admin/users/' + id + '/history');
+    tab = 'activity';
+    drawHistory();
+  }catch(e){
+    $('drawer').innerHTML = '<div class="d-body"><p class="none">' + esc(e.message) + '</p></div>';
+  }
+}
+
+function drawHistory(){
+  const h = hist;
+  let body = '';
+  if (tab === 'activity'){
+    body = h.activity.length ? '<ul class="tl">' + h.activity.map(a => `
+      <li style="--c:${ACTION_COLOR[a.action] || '#9AA7AD'}">
+        <div class="t"><span class="tag">${esc(a.action)}</span><small title="${esc(when(a.created_at))}">${esc(ago(a.created_at))}</small></div>
+        ${a.detail ? '<p>' + esc(a.detail) + '</p>' : ''}
+      </li>`).join('') + '</ul>'
+      : '<p class="none">No activity recorded yet. New actions will appear here.</p>';
+  }
+  if (tab === 'objects'){
+    body = h.items.length ? h.items.map(i => `
+      <div class="card"><b>${esc(i.name)}</b><small>${esc(peso(i.price))} · listed ${esc(when(i.created_at))}</small></div>`).join('')
+      : '<p class="none">This user has not listed any objects.</p>';
+  }
+  if (tab === 'chapters'){
+    body = h.chapters.length ? h.chapters.map(c => `
+      <div class="card"><b>${esc(c.item_name)}</b><small>${esc(c.place || 'No place')} · ${esc(when(c.created_at))}</small><p>${esc(c.story)}</p></div>`).join('')
+      : '<p class="none">This user has not written any chapters.</p>';
+  }
+  const t = (k, label, n) => `<button class="tab ${tab === k ? 'on' : ''}" data-tab="${k}">${label} (${n})</button>`;
+  $('drawer').innerHTML = `
+    <div class="d-head">
+      ${avatar(h.user)}
+      <div><h2>${esc(h.user.name)}</h2><p>${esc(h.user.email)} · joined ${esc(day(h.user.created_at))}</p></div>
+      <button class="x" data-close aria-label="Close">&times;</button>
+    </div>
+    <div class="d-sum">
+      <div><b>${h.activity.length}</b><span>Actions</span></div>
+      <div><b>${h.items.length}</b><span>Objects</span></div>
+      <div><b>${h.chapters.length}</b><span>Chapters</span></div>
+    </div>
+    <div class="tabs">${t('activity', 'Activity', h.activity.length)}${t('objects', 'Objects', h.items.length)}${t('chapters', 'Chapters', h.chapters.length)}</div>
+    <div class="d-body">${body}</div>`;
+}
+
+/* ---------- events ---------- */
+$('q').addEventListener('input', renderRows);
+$('sort').addEventListener('change', renderRows);
+$('veil').addEventListener('click', closeDrawer);
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Escape') return;
+  if ($('modal').classList.contains('on')) $('m-no').click(); else closeDrawer();
+});
+
+$('drawer').addEventListener('click', e => {
+  if (e.target.closest('[data-close]')) return closeDrawer();
+  const t = e.target.closest('[data-tab]');
+  if (t && hist){ tab = t.dataset.tab; drawHistory(); }
+});
+
+$('rows').addEventListener('click', async e => {
+  const hb = e.target.closest('[data-hist]');
+  if (hb) return showHistory(hb.dataset.hist);
+  const db = e.target.closest('[data-del]');
+  if (!db) return;
+  const u = users.find(x => x.id === db.dataset.del);
+  if (!u) return;
+  const ok = await confirmBox('Delete ' + u.name + '?',
+    'This permanently removes the account, ' + u.items + ' object' + (u.items === 1 ? '' : 's') + ', ' + u.chapters + ' chapter' + (u.chapters === 1 ? '' : 's') + ' and the full history. This cannot be undone.',
+    'Delete account');
+  if (!ok) return;
+  try{
+    await Auth.call('DELETE', '/api/admin/users/' + u.id);
+    closeDrawer();
+    toast('Deleted ' + u.name);
+    load();
+  }catch(err){ toast(err.message, true); }
+});
+
+$('logout').addEventListener('click', async () => { await Auth.logout(); location.href = 'index.html'; });
+
+Auth.ready.then(() => {
+  const u = Auth.user();
+  if (!u || u.role !== 'admin'){ location.href = 'index.html'; return; }
+  $('who').textContent = u.email;
+  load();
+});
+</script>
+</body>
+</html>

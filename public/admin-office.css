@@ -1,0 +1,35 @@
+/* admin-office.css - load AFTER the <style> block in admin.html. Office look for the admin page. */
+:root{
+  --ink:#242424; --muted:#616161; --tag:#0F6CBD; --accent:#0F6CBD;
+  --bg:#F5F5F5; --card:#fff; --line:#E0E0E0; --soft:#FAFAFA; --danger:#B10E1C;
+  --radius:8px; --shadow:0 1px 3px rgba(0,0,0,.06);
+  --font:'Segoe UI',system-ui,-apple-system,Roboto,'Helvetica Neue',Arial,sans-serif;
+}
+body,h1,h2,h3,.brand,.stat b,.av,.d-sum b,.pill,.tag{font-family:var(--font)}
+h1,h2,h3,.brand{letter-spacing:0;font-weight:600}
+.head h1{font-size:26px;font-weight:600}
+
+/* blue title bar, like an Office app */
+.bar{background:var(--accent)}
+.brand{font-size:16px}
+.mark{width:20px;height:20px;background:#fff;border:0;border-radius:4px}
+.pill{background:rgba(255,255,255,.2);color:#fff;font-weight:600;text-transform:none;letter-spacing:0;font-size:12px}
+.who{color:#DCEBF8}
+.bar .btn{border-color:rgba(255,255,255,.6)}
+.bar .btn:hover{background:rgba(255,255,255,.15)}
+
+.btn{border-radius:4px;border-color:#BDBDBD}
+.btn.solid{background:var(--accent);border-color:var(--accent)}
+.btn.solid:hover{background:#115EA3}
+.btn.danger{border-color:#E8B4B8}
+.btn.fill-danger{background:var(--danger);border-color:var(--danger)}
+
+.i1{background:#EBF3FC;color:var(--accent)}
+.stat,.panel{border-radius:8px}
+.search input,select{border:1px solid #8A8886;border-radius:4px;background:#fff}
+.search input:focus{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
+th{text-transform:none;letter-spacing:0;font-size:13px;font-weight:600;color:#424242}
+tbody tr:hover{background:#F5F9FD}
+.tag{text-transform:none;letter-spacing:0;font-weight:600}
+.tab.on{color:var(--accent);border-color:var(--accent)}
+.dlg{border-radius:8px}
