@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Profile | Secondhand Atlas</title>
+<style>
+  :root{
+    --bg:#F5F6F8; --card:#FFFFFF; --text:#1F2933; --muted:#667085;
+    --line:#E4E7EC; --accent:#0F6CBD; --accent-dark:#0B5394; --soft:#EEF2F6;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);min-height:100vh;
+    font:15px/1.55 'Segoe UI',system-ui,-apple-system,'Helvetica Neue',Arial,sans-serif}
+  h1,h2,h3,p{margin:0}
+  a{color:var(--accent)}
+  a:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  [hidden]{display:none !important}
+
+  /* top bar */
+  .nav{background:var(--card);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:10}
+  .nav-in{max-width:1040px;margin:0 auto;padding:0 24px;height:56px;display:flex;align-items:center;gap:16px}
+  .brand{font-weight:600;font-size:16px;color:var(--text);text-decoration:none;margin-right:auto}
+  .back{font-size:14px;color:var(--accent);text-decoration:none;font-weight:500}
+  .back:hover{color:var(--accent-dark);text-decoration:underline}
+
+  .wrap{max-width:1040px;margin:0 auto;padding:28px 24px 64px}
+  .crumbs{font-size:13px;color:var(--muted);margin-bottom:16px}
+  .crumbs a{color:var(--muted);text-decoration:none}
+  .crumbs a:hover{color:var(--accent);text-decoration:underline}
+
+  .layout{display:grid;grid-template-columns:280px minmax(0,1fr);gap:24px;align-items:start}
+
+  .card{background:var(--card);border:1px solid var(--line);border-radius:8px;box-shadow:0 1px 2px rgba(16,24,40,.04)}
+
+  /* profile card */
+  .profile{padding:28px 24px;text-align:center;position:sticky;top:80px}
+  .avatar{width:104px;height:104px;border-radius:50%;margin:0 auto 16px;background:var(--soft);color:var(--muted);
+    display:grid;place-items:center;font:600 34px 'Segoe UI',system-ui,sans-serif;overflow:hidden;border:1px solid var(--line)}
+  .avatar img{width:100%;height:100%;object-fit:cover;display:block}
+  .profile h1{font-size:20px;font-weight:600;word-break:break-word}
+  .role{display:inline-block;margin-top:8px;padding:2px 10px;border-radius:4px;background:var(--soft);color:var(--muted);
+    font-size:12px;font-weight:600;letter-spacing:.04em;text-transform:uppercase}
+  .since{color:var(--muted);font-size:13.5px;margin-top:12px}
+  .stats{display:grid;grid-template-columns:1fr 1fr;margin-top:20px;padding-top:18px;border-top:1px solid var(--line)}
+  .stat + .stat{border-left:1px solid var(--line)}
+  .num{display:block;font-size:24px;font-weight:600;line-height:1.1}
+  .lbl{color:var(--muted);font-size:12.5px}
+
+  /* sections */
+  .section{padding:22px 24px}
+  .section + .section{margin-top:24px}
+  .section-head{display:flex;align-items:center;justify-content:space-between;padding-bottom:14px;border-bottom:1px solid var(--line)}
+  .section-head h2{font-size:16px;font-weight:600}
+  .badge{background:var(--soft);color:var(--muted);font-size:12.5px;font-weight:600;padding:1px 9px;border-radius:999px}
+
+  /* objects list */
+  .item{display:flex;align-items:center;gap:14px;padding:14px 0;border-bottom:1px solid var(--line)}
+  .item:last-child{border-bottom:0;padding-bottom:0}
+  .thumb{width:56px;height:56px;border-radius:6px;object-fit:cover;flex:none;background:var(--soft);border:1px solid var(--line);
+    display:grid;place-items:center;color:var(--muted)}
+  .thumb svg{width:22px;height:22px}
+  .item-name{font-weight:600;word-break:break-word}
+  .item-sub{color:var(--muted);font-size:13.5px}
+  .price{margin-left:auto;font-weight:600;white-space:nowrap;padding-left:12px}
+
+  /* chapters */
+  .chapter{padding:16px 0;border-bottom:1px solid var(--line)}
+  .chapter:last-child{border-bottom:0;padding-bottom:0}
+  .ch-top{display:flex;justify-content:space-between;gap:12px;align-items:baseline;flex-wrap:wrap}
+  .ch-top b{font-weight:600}
+  .ch-year{color:var(--muted);font-size:13px}
+  .ch-story{margin-top:4px;color:#344054;word-break:break-word}
+
+  .empty{color:var(--muted);padding:20px 0 4px;text-align:center}
+  .notice{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:28px;text-align:center;color:var(--muted)}
+  .skeleton{height:320px;border-radius:8px;background:linear-gradient(90deg,#ECEFF3,#F6F7F9,#ECEFF3);background-size:200% 100%;animation:sh 1.3s infinite linear}
+  @keyframes sh{to{background-position:-200% 0}}
+  @media (prefers-reduced-motion:reduce){.skeleton{animation:none}}
+
+  @media (max-width:820px){
+    .layout{grid-template-columns:1fr}
+    .profile{position:static}
+    .wrap{padding:20px 16px 48px}
+    .nav-in{padding:0 16px}
+    .section{padding:18px 16px}
+  }
+</style>
+<link rel="stylesheet" href="home-office.css">
+</head>
+<body>
+
+<nav class="nav" aria-label="Main">
+  <div class="nav-in">
+    <a class="brand" href="index.html">Secondhand Atlas</a>
+    <a class="back" href="index.html#explore">Back to the map</a>
+  </div>
+</nav>
+
+<main class="wrap">
+  <p class="crumbs"><a href="index.html#explore">Map</a> / Member profile</p>
+  <div class="skeleton" id="loading" aria-label="Loading profile"></div>
+  <div id="content" hidden></div>
+</main>
+
+<script src="auth.js"></script>
+<script>
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const initials = n => String(n).trim().split(/\s+/).slice(0, 2).map(w => w[0] || '').join('').toUpperCase() || '?';
+const priceText = p => Number(p) === 0 ? 'Free' : '₱' + Number(p).toLocaleString();
+const NOIMG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="1.6"/><path d="M21 16l-5-5-8 8"/></svg>';
+
+function fmtDate(v){
+  const d = v ? new Date(v) : null;
+  return d && !isNaN(d) ? d.toLocaleDateString(undefined, { year:'numeric', month:'short', day:'numeric' }) : '';
+}
+
+function show(r){
+  const u = r.user;
+  const d = u.createdAt ? new Date(u.createdAt) : null;
+  const since = d && !isNaN(d) ? 'Member since ' + d.toLocaleDateString(undefined, { year:'numeric', month:'long' }) : '';
+
+  const objects = r.items.length
+    ? r.items.map(i => `
+        <div class="item">
+          ${i.image ? '<img class="thumb" loading="lazy" alt="" src="' + esc(i.image) + '">' : '<span class="thumb">' + NOIMG + '</span>'}
+          <div>
+            <div class="item-name">${esc(i.name)}</div>
+            ${fmtDate(i.createdAt) ? '<div class="item-sub">Listed ' + esc(fmtDate(i.createdAt)) + '</div>' : ''}
+          </div>
+          <div class="price">${priceText(i.price)}</div>
+        </div>`).join('')
+    : '<p class="empty">No objects listed.</p>';
+
+  const chapters = r.chapters.length
+    ? r.chapters.map(c => `
+        <div class="chapter">
+          <div class="ch-top"><b>${esc(c.item_name)}</b><span class="ch-year">${esc(c.year)}</span></div>
+          <p class="ch-story">${esc(c.story)}</p>
+        </div>`).join('')
+    : '<p class="empty">No chapters written.</p>';
+
+  $('content').innerHTML = `
+    <div class="layout">
+      <aside class="card profile" aria-label="Profile summary">
+        <div class="avatar">${u.avatar ? '<img alt="Profile photo of ' + esc(u.name) + '" src="' + esc(u.avatar) + '">' : esc(initials(u.name))}</div>
+        <h1>${esc(u.name)}</h1>
+        <span class="role">Member</span>
+        ${since ? '<p class="since">' + esc(since) + '</p>' : ''}
+        <div class="stats">
+          <div class="stat"><span class="num">${r.items.length}</span><span class="lbl">Objects</span></div>
+          <div class="stat"><span class="num">${r.chapters.length}</span><span class="lbl">Chapters</span></div>
+        </div>
+      </aside>
+
+      <div>
+        <section class="card section" aria-labelledby="h-objects">
+          <div class="section-head"><h2 id="h-objects">Objects listed</h2><span class="badge">${r.items.length}</span></div>
+          ${objects}
+        </section>
+        <section class="card section" aria-labelledby="h-chapters">
+          <div class="section-head"><h2 id="h-chapters">Chapters written</h2><span class="badge">${r.chapters.length}</span></div>
+          ${chapters}
+        </section>
+      </div>
+    </div>`;
+
+  document.title = u.name + ' | Secondhand Atlas';
+  $('loading').hidden = true;
+  $('content').hidden = false;
+}
+
+function fail(msg){
+  $('loading').hidden = true;
+  $('content').hidden = false;
+  $('content').innerHTML = '<div class="notice">' + esc(msg) + ' <a href="index.html#explore">Back to the map</a></div>';
+}
+
+(async () => {
+  await Auth.ready;
+  const id = new URLSearchParams(location.search).get('id') || '';
+  const here = 'user.html?id=' + encodeURIComponent(id);
+  if (!Auth.user()){ location.href = 'login.html?next=' + encodeURIComponent(here); return; }
+  if (!id){ fail('No person selected.'); return; }
+  try{
+    show(await Auth.call('GET', '/api/users/' + encodeURIComponent(id)));
+  }catch(err){
+    if (err.status === 401){ location.href = 'login.html?next=' + encodeURIComponent(here); return; }
+    fail(err.message);
+  }
+})();
+</script>
+</body>
+</html>

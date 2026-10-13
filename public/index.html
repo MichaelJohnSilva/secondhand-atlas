@@ -124,6 +124,25 @@
   .preview{display:block;max-width:100%;max-height:180px;margin-top:8px;border:1.5px solid var(--ink);border-radius:8px}
   .story .photo{margin:0;max-height:200px}
 
+  /* photo gallery on an object's page, and the previews in the form */
+  .gallery{margin:0 0 14px}
+  .gallery .photo{margin:0}
+  .gmain{position:relative}
+  .gnav{position:absolute;top:50%;transform:translateY(-50%);width:36px;height:36px;border-radius:50%;border:2px solid var(--ink);
+    background:rgba(255,255,255,.92);color:var(--ink);font:700 22px/1 'Bricolage Grotesque',sans-serif;display:grid;place-items:center;padding:0;cursor:pointer}
+  .gnav.prev{left:8px}
+  .gnav.next{right:8px}
+  .gcount{position:absolute;right:8px;bottom:8px;background:rgba(29,43,51,.85);color:#fff;font:600 13px 'Bricolage Grotesque',sans-serif;padding:2px 8px;border-radius:10px}
+  .gthumbs{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap}
+  .gthumb{padding:0;border:2px solid var(--line);border-radius:8px;background:none;cursor:pointer;line-height:0;overflow:hidden}
+  .gthumb img{width:52px;height:52px;object-fit:cover}
+  .gthumb.on{border-color:var(--ink)}
+  .pgrid{display:flex;gap:10px;flex-wrap:wrap;margin-top:8px}
+  .pitem{position:relative;line-height:0}
+  .pitem img{width:76px;height:76px;object-fit:cover;border:1.5px solid var(--ink);border-radius:8px}
+  .pitem button{position:absolute;top:-8px;right:-8px;width:24px;height:24px;border-radius:50%;border:2px solid var(--ink);
+    background:#fff;color:var(--ink);font:700 14px/1 sans-serif;padding:0;cursor:pointer}
+
   /* place search in the form */
   .psearch{display:flex;gap:8px;margin-top:5px}
   .psearch input.field{margin-top:0;flex:1;min-width:0}
@@ -396,24 +415,55 @@ function shrinkPhoto(file, maxSide = 1280, quality = 0.82){
   });
 }
 
+const MAX_PHOTOS = 5;
+
+/* small previews with a remove button, and the "2 of 5" counter */
+function renderPreviews(){
+  const box = $('photo-preview');
+  if (!box || !form || !form.photos) return;
+  const list = form.photos;
+  box.innerHTML = list.length
+    ? '<div class="pgrid">' + list.map((src, i) =>
+        '<div class="pitem"><img alt="Preview of photo ' + (i + 1) + '" src="' + src + '">' +
+        '<button type="button" data-act="rmphoto" data-i="' + i + '" aria-label="Remove photo ' + (i + 1) + '">&times;</button></div>'
+      ).join('') + '</div>'
+    : '';
+  const left = MAX_PHOTOS - list.length;
+  const hint = $('photo-hint');
+  if (hint) hint.textContent = list.length + ' of ' + MAX_PHOTOS + ' photos added' +
+    (left > 0 ? '. You can add ' + left + ' more.' : '. That is the maximum.');
+  const inp = $('f-photo');
+  if (inp) inp.disabled = left <= 0;
+}
+
 async function onPhotoChosen(e){
   const mine = form;                       // the form this choice belongs to
-  const input = e.target, file = input.files[0];
-  const box = $('photo-preview'), msg = $('photo-msg');
-  if (!mine) return;
-  mine.photo = null; box.innerHTML = ''; msg.textContent = '';
-  if (!file) return;
-  if (!file.type.startsWith('image/')){ msg.textContent = 'Choose a picture file.'; input.value = ''; return; }
-  if (file.size > 25 * 1024 * 1024){ msg.textContent = 'That picture is too big. Choose one under 25 MB.'; input.value = ''; return; }
-  try{
-    const data = await shrinkPhoto(file);
-    if (form !== mine) return;             // the person left the form meanwhile
-    mine.photo = data;
-    box.innerHTML = '<img class="preview" alt="Preview of your photo" src="' + data + '">';
-  }catch(err){
-    msg.textContent = err.message;
-    input.value = '';
+  const input = e.target;
+  const files = Array.from(input.files || []);
+  const msg = $('photo-msg');
+  if (!mine || !mine.photos || !files.length) return;
+  msg.textContent = '';
+  const room = MAX_PHOTOS - mine.photos.length;
+  const notes = [];
+  if (files.length > room) notes.push('Only ' + MAX_PHOTOS + ' photos are allowed per object, so some were skipped.');
+  for (const file of files.slice(0, Math.max(0, room))){
+    if (!file.type.startsWith('image/')){ notes.push('"' + file.name + '" is not a picture.'); continue; }
+    if (file.size > 25 * 1024 * 1024){ notes.push('"' + file.name + '" is over 25 MB.'); continue; }
+    try{
+      const data = await shrinkPhoto(file, 1200, 0.8);
+      if (form !== mine) return;           // the person left the form meanwhile
+      if (mine.photos.length < MAX_PHOTOS) mine.photos.push(data);
+      renderPreviews();
+    }catch(err){ notes.push(err.message); }
   }
+  input.value = '';
+  if (form === mine){ msg.textContent = notes.join(' '); renderPreviews(); }
+}
+
+function removePhoto(i){
+  if (!form || !form.photos) return;
+  form.photos.splice(i, 1);
+  renderPreviews();
 }
 
 /* ---------- map setup (centered on Cebu City) ---------- */
@@ -723,7 +773,7 @@ function pickResult(i){
 /* ---------- state ---------- */
 let view = 'browse';      // 'browse' | 'detail' | 'form'
 let selectedId = null;
-let form = null;          // { type:'list' | 'pass', id?:number, pick:{lat,lng,label?}|null, photo?:string|null }
+let form = null;          // { type:'list' | 'pass', id?:number, pick:{lat,lng,label?}|null, photos?:string[] }
 let query = '';
 
 const here = item => item.chapters[item.chapters.length - 1];
@@ -826,11 +876,11 @@ function render(){
       <button class="ghost" data-act="back">Back to all objects</button>
       <h3>${esc(it.name)}</h3>
       <p class="meta">${priceText(it.price)}, now in ${esc(placeOf(c))}</p>
-      ${it.image ? `<img class="photo" src="${esc(it.image)}" alt="Photo of ${esc(it.name)}">` : ''}
+      ${galleryHtml(it)}
       <ol class="chain">
         ${it.chapters.map((ch, i) => `
           <li data-n="${i + 1}">
-            <span class="who">${esc(ch.owner)}</span>
+                        <a class="who" href="user.html?id=${encodeURIComponent(ch.userId)}">${esc(ch.owner)}</a>
             <span class="where">${esc(placeOf(ch))}, ${ch.year}</span>
             <p>${esc(ch.story)}</p>
           </li>`).join('')}
@@ -861,9 +911,10 @@ function render(){
       ${isList ? `
         <label for="f-name">Object</label><input class="field" id="f-name" autocomplete="off">
         <label for="f-price">Price in pesos (leave blank if free)</label><input class="field" id="f-price" inputmode="numeric" autocomplete="off">
-        <label for="f-photo">Photo of the object (optional)</label>
-        <input class="file" id="f-photo" type="file" accept="image/*">
+        <label for="f-photo">Photos of the object (optional, up to 5)</label>
+        <input class="file" id="f-photo" type="file" accept="image/*" multiple>
         <p class="err" id="photo-msg" style="min-height:0;margin-top:6px"></p>
+        <p class="meta" id="photo-hint" style="margin:6px 0 0"></p>
         <div id="photo-preview"></div>` : ''}
       <label for="f-story">${isList ? 'Its story so far' : 'Your story with it'}</label>
       <textarea id="f-story"></textarea>
@@ -876,7 +927,7 @@ function render(){
       if (e.key === 'Enter'){ e.preventDefault(); runSearch(); }
     });
     const ph = $('f-photo');
-    if (ph) ph.addEventListener('change', onPhotoChosen);
+    if (ph){ ph.addEventListener('change', onPhotoChosen); renderPreviews(); }
   }
   drawMap();
 }
@@ -905,9 +956,45 @@ function renderStories(){
     </article>`).join('');
 }
 
+/* ---------- photo gallery (object page) ---------- */
+let galleryIdx = 0;
+const photosOf = it => (it.images && it.images.length) ? it.images : (it.image ? [it.image] : []);
+
+function galleryHtml(it){
+  const ph = photosOf(it);
+  if (!ph.length) return '';
+  if (galleryIdx >= ph.length || galleryIdx < 0) galleryIdx = 0;
+  const many = ph.length > 1;
+  return '<div class="gallery" id="gallery">' +
+    '<div class="gmain"><img class="photo" src="' + esc(ph[galleryIdx]) + '" alt="Photo ' + (galleryIdx + 1) + ' of ' + ph.length + ': ' + esc(it.name) + '">' +
+    (many
+      ? '<button type="button" class="gnav prev" data-act="gprev" aria-label="Previous photo">&lsaquo;</button>' +
+        '<button type="button" class="gnav next" data-act="gnext" aria-label="Next photo">&rsaquo;</button>' +
+        '<span class="gcount">' + (galleryIdx + 1) + ' / ' + ph.length + '</span>'
+      : '') +
+    '</div>' +
+    (many
+      ? '<div class="gthumbs">' + ph.map((src, i) =>
+          '<button type="button" class="gthumb' + (i === galleryIdx ? ' on' : '') + '" data-act="gthumb" data-i="' + i +
+          '" aria-label="Show photo ' + (i + 1) + '"><img src="' + esc(src) + '" alt=""></button>').join('') + '</div>'
+      : '') +
+    '</div>';
+}
+
+/* delta = -1 / +1 for the arrows, abs = a thumbnail number */
+function showPhoto(delta, abs){
+  const it = items.find(i => i.id === selectedId);
+  if (!it) return;
+  const n = photosOf(it).length;
+  if (!n) return;
+  galleryIdx = abs != null ? abs : (galleryIdx + delta + n) % n;
+  const g = $('gallery');
+  if (g) g.outerHTML = galleryHtml(it);
+}
+
 /* ---------- actions ---------- */
 function openItem(id){
-  selectedId = id; view = 'detail'; render();
+  selectedId = id; galleryIdx = 0; view = 'detail'; render();
   const c = here(items.find(i => i.id === id));
   map.panTo([c.lat, c.lng]);
 }
@@ -935,6 +1022,7 @@ function renderAuthNav(){
   $('authNav').innerHTML = u
     ? `<span class="hi">Hi, ${esc(u.name.split(' ')[0])}</span>
        ${u.role === 'admin' ? '<a class="secondary" href="admin.html">Accounts</a>' : ''}
+       <a class="secondary" href="profile.html">Profile</a>
        <button class="secondary" id="logoutBtn">Log out</button>
        ${u.role === 'admin' ? '' : '<button class="primary" data-go="list">List an object</button>'}`
     : `<a class="secondary" href="login.html">Log in</a>
@@ -1018,7 +1106,7 @@ async function cancelPass(){
 function startList(){
   if (needLogin()) return;
   if (isAdmin()) return;   // admins can only view
-  form = {type:'list', pick:null, photo:null}; view = 'form'; render();
+  form = {type:'list', pick:null, photos:[]}; view = 'form'; render();
 }
 
 async function removeItem(){
@@ -1062,7 +1150,7 @@ async function submit(){
     if (!name) return fail('Add the object\'s name.');
     const price = val('f-price') === '' ? 0 : Number(val('f-price'));
     if (Number.isNaN(price) || price < 0) return fail('Price must be a number.');
-    body = { name, price, chapter, image: form.photo || undefined };
+    body = { name, price, chapter, images: (form.photos && form.photos.length) ? form.photos : undefined };
   } else {
     url = '/api/items/' + form.id + '/chapters';
   }
@@ -1073,7 +1161,7 @@ async function submit(){
   try{
     const saved = (await Auth.call('POST', url, body)).item;
     upsertItem(saved);
-    selectedId = saved.id;
+    selectedId = saved.id; galleryIdx = 0;
   }catch(e){
     if (e.status === 401){ goLogin(); return; }   // login expired
     $('err').textContent = e.message;
@@ -1103,6 +1191,10 @@ $('side').addEventListener('click', e => {
   if (act === 'search')  runSearch();
   if (act === 'pickres') pickResult(Number(btn.dataset.i));
   if (act === 'usehere') useHere();
+  if (act === 'gprev')   showPhoto(-1);
+  if (act === 'gnext')   showPhoto(1);
+  if (act === 'gthumb')  showPhoto(0, Number(btn.dataset.i));
+  if (act === 'rmphoto') removePhoto(Number(btn.dataset.i));
 });
 
 /* show the email boxes only when "Passed on" is chosen */

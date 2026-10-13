@@ -116,11 +116,22 @@ db.ready = (async () => {
       created_at   TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
     );
 
+    CREATE TABLE IF NOT EXISTS item_images (
+      item_id  INTEGER NOT NULL REFERENCES items(id) ON DELETE CASCADE,
+      name     TEXT NOT NULL,
+      position INTEGER NOT NULL,
+      PRIMARY KEY (item_id, name)
+    );
+    CREATE INDEX IF NOT EXISTS idx_item_images_item ON item_images(item_id, position);
+
     CREATE TABLE IF NOT EXISTS images (
       name TEXT PRIMARY KEY,
       data TEXT NOT NULL
     );
   `);
+
+  /* profile photo: the name of a row in "images" (older databases get the column added here) */
+  try { await client.execute('ALTER TABLE users ADD COLUMN avatar TEXT'); } catch (e) { /* already there */ }
 })();
 
 module.exports = db;

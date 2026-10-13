@@ -32,7 +32,8 @@ const SECURE = process.env.COOKIE_SECURE === '1';   // set to 1 once the site ru
 const PUBLIC = path.join(__dirname, 'public');
 const SESSION_DAYS = 30;
 const MAX_BODY = 100 * 1024;
-const MAX_BODY_WITH_PHOTO = 3.5 * 1024 * 1024;
+const MAX_BODY_WITH_PHOTO = 12 * 1024 * 1024;   // room for up to 5 photos in one request
+const MAX_PHOTOS = 5;
 const IMAGE_MAX_BYTES = 2 * 1024 * 1024;
 
 class HttpError extends Error {
@@ -98,6 +99,15 @@ function parseImage(dataUrl){
   return { name: crypto.randomBytes(12).toString('hex') + '.jpg', b64: m[1] };
 }
 
+/* accepts body.images (a list) or the old single body.image; returns up to MAX_PHOTOS checked photos */
+function parseImages(body){
+  let list = body.images;
+  if (list == null) list = body.image ? [body.image] : [];
+  if (!Array.isArray(list)) throw new HttpError(400, 'Photos must be a list.');
+  if (list.length > MAX_PHOTOS) throw new HttpError(400, 'You can add at most ' + MAX_PHOTOS + ' photos.');
+  return list.map(parseImage).filter(Boolean);
+}
+
 async function deleteImage(name){
   if (!name || !/^[a-f0-9]{24}\.jpg$/.test(name)) return;
   try { await db.run('DELETE FROM images WHERE name = ?', [name]); } catch (e) {}
@@ -131,14 +141,14 @@ async function startSession(res, userId){
   const expires = Date.now() + SESSION_DAYS * 86400000;
   await db.run('INSERT INTO sessions (token_hash, user_id, expires_at) VALUES (?, ?, ?)',
     [sha256(token), userId, expires]);
-    res.setHeader('Set-Cookie', sessionCookie(token, null));   // no Max-Age: logs out when the browser is closed
+  res.setHeader('Set-Cookie', sessionCookie(token, null));   // no Max-Age: logs out when the browser is closed
 }
 
 async function currentUser(req){
   const token = parseCookies(req).sid;
   if (!token) return null;
   const row = await db.get(`
-    SELECT u.id, u.name, u.email, u.role, s.expires_at
+    SELECT u.id, u.name, u.email, u.role, u.avatar, s.expires_at
     FROM sessions s JOIN users u ON u.id = s.user_id
     WHERE s.token_hash = ?`, [sha256(token)]);
   if (!row) return null;
@@ -146,7 +156,8 @@ async function currentUser(req){
     await db.run('DELETE FROM sessions WHERE token_hash = ?', [sha256(token)]);
     return null;
   }
-  return { id: row.id, name: row.name, email: row.email, role: row.role };
+  return { id: row.id, name: row.name, email: row.email, role: row.role,
+           avatar: row.avatar ? '/uploads/' + row.avatar : null };
 }
 
 async function requireUser(req){
@@ -345,10 +356,21 @@ async function loadItems(onlyId, viewer){
   const transfers = onlyId == null
     ? await db.all('SELECT item_id, to_email FROM transfers')
     : await db.all('SELECT item_id, to_email FROM transfers WHERE item_id = ?', [onlyId]);
+  const photoRows = onlyId == null
+    ? await db.all('SELECT item_id, name FROM item_images ORDER BY item_id, position')
+    : await db.all('SELECT item_id, name FROM item_images WHERE item_id = ? ORDER BY position', [onlyId]);
+  const photosBy = new Map();
+  for (const p of photoRows){
+    if (!photosBy.has(p.item_id)) photosBy.set(p.item_id, []);
+    photosBy.get(p.item_id).push(p.name);
+  }
+  /* objects listed before this change have only items.image, so fall back to it */
+  const namesOf = i => photosBy.get(i.id) || (i.image ? [i.image] : []);
   const tById = new Map(transfers.map(t => [t.item_id, t]));
   const byId = new Map(items.map(i => [i.id, {
     id: i.id, name: i.name, price: i.price,
-    image: i.image ? '/uploads/' + i.image : null,
+    images: namesOf(i).map(n => '/uploads/' + n),
+    image: namesOf(i)[0] ? '/uploads/' + namesOf(i)[0] : null,
     createdBy: i.created_by,
     chapters: []
   }]));
@@ -395,6 +417,116 @@ async function api(req, res, pathname){
 
   if (pathname === '/api/me' && method === 'GET'){
     return send(res, 200, { user: await currentUser(req) });
+  }
+
+  /* ---------- another person's public page ---------- */
+  const pu = pathname.match(/^\/api\/users\/(\w+)$/);
+  if (pu && method === 'GET'){
+    await requireUser(req);
+    const uid = pu[1];
+    const u = await db.get("SELECT id, name, avatar, created_at FROM users WHERE id = ? AND role != 'admin'", [uid]);
+    if (!u) throw new HttpError(404, 'That person no longer exists.');
+    const items = await db.all('SELECT id, name, price, image, created_at FROM items WHERE created_by = ? ORDER BY id DESC', [uid]);
+    const chapters = await db.all(`
+      SELECT i.name AS item_name, c.story, c.year, c.created_at
+      FROM chapters c JOIN items i ON i.id = c.item_id
+      WHERE c.user_id = ? ORDER BY c.id DESC`, [uid]);
+    return send(res, 200, {
+      user: { id: u.id, name: u.name, avatar: u.avatar ? '/uploads/' + u.avatar : null, createdAt: u.created_at },
+      items: items.map(i => ({ id: i.id, name: i.name, price: i.price, image: i.image ? '/uploads/' + i.image : null, createdAt: i.created_at })),
+      chapters
+    });
+  }
+
+  /* ---------- profile ---------- */
+  if (pathname === '/api/profile' && method === 'GET'){
+    const me = await requireUser(req);
+    const row = await db.get('SELECT created_at FROM users WHERE id = ?', [me.id]);
+    const stats = await db.get(`SELECT
+      (SELECT COUNT(*) FROM items WHERE created_by = ?) AS items,
+      (SELECT COUNT(*) FROM chapters WHERE user_id = ?) AS chapters`, [me.id, me.id]);
+    return send(res, 200, { user: { ...me, createdAt: row ? row.created_at : null }, stats });
+  }
+
+  if (pathname === '/api/profile' && method === 'POST'){
+    const me = await requireUser(req);
+    if (!allow('profile:' + me.id, 30, 3600000)) throw new HttpError(429, 'Too many changes. Please try again later.');
+    const body = await readJson(req);
+    const name = String(body.name || '').trim();
+    const email = String(body.email || '').trim().toLowerCase();
+    if (name.length < 2)   throw new HttpError(400, 'Enter your name.');
+    if (name.length > 60)  throw new HttpError(400, 'That name is too long.');
+    if (!EMAIL_RE.test(email) || email.length > 254) throw new HttpError(400, 'Enter a valid email address.');
+
+    const emailChanged = email !== me.email;
+    if (emailChanged){
+      const key = 'pwcheck:' + me.id;
+      if (tooManyFailures(key)) throw new HttpError(429, 'Too many wrong passwords. Wait a few minutes and try again.');
+      const full = await db.get('SELECT password_hash FROM users WHERE id = ?', [me.id]);
+      const ok = await verifyPassword(String(body.currentPassword || '').slice(0, 200), full.password_hash);
+      if (!ok){ noteFailure(key); throw new HttpError(403, 'Your current password is incorrect.'); }
+      attempts.delete(key);
+      if (await db.get('SELECT 1 AS x FROM users WHERE email = ? AND id != ?', [email, me.id])){
+        throw new HttpError(409, 'Another account already uses this email address.');
+      }
+    }
+    await db.transaction(async tx => {
+      await tx.run('UPDATE users SET name = ?, email = ? WHERE id = ?', [name, email, me.id]);
+      await tx.run('UPDATE chapters SET owner_name = ? WHERE user_id = ?', [name, me.id]);
+      if (emailChanged) await tx.run('UPDATE transfers SET to_email = ? WHERE to_email = ?', [email, me.email]);
+    });
+    await logChange('PROFILE UPDATED', name + ' <' + email + '>' + (emailChanged ? ' (email changed from ' + me.email + ')' : ''), me.id);
+    return send(res, 200, { user: { id: me.id, name, email, role: me.role, avatar: me.avatar } });
+  }
+
+  if (pathname === '/api/profile/photo' && method === 'POST'){
+    const me = await requireUser(req);
+    if (!allow('avatar:' + me.id, 20, 3600000)) throw new HttpError(429, 'Too many changes. Please try again later.');
+    const body = await readJson(req, 4 * 1024 * 1024);
+    const img = parseImage(body.image);
+    if (!img) throw new HttpError(400, 'Choose a photo.');
+    const old = await db.get('SELECT avatar FROM users WHERE id = ?', [me.id]);
+    await db.transaction(async tx => {
+      await tx.run('INSERT INTO images (name, data) VALUES (?, ?)', [img.name, img.b64]);
+      await tx.run('UPDATE users SET avatar = ? WHERE id = ?', [img.name, me.id]);
+    });
+    if (old && old.avatar) await deleteImage(old.avatar);   // the previous photo
+    await logChange('PROFILE PHOTO CHANGED', me.name + ' <' + me.email + '>', me.id);
+    return send(res, 200, { avatar: '/uploads/' + img.name });
+  }
+
+  if (pathname === '/api/profile/photo' && method === 'DELETE'){
+    const me = await requireUser(req);
+    const old = await db.get('SELECT avatar FROM users WHERE id = ?', [me.id]);
+    await db.run('UPDATE users SET avatar = NULL WHERE id = ?', [me.id]);
+    if (old && old.avatar) await deleteImage(old.avatar);
+    await logChange('PROFILE PHOTO REMOVED', me.name + ' <' + me.email + '>', me.id);
+    return send(res, 200, { avatar: null });
+  }
+
+  if (pathname === '/api/change-password' && method === 'POST'){
+    const me = await requireUser(req);
+    const body = await readJson(req);
+    const current = String(body.currentPassword || '').slice(0, 200);
+    const next = String(body.newPassword || '');
+    if (next.length < 8)   throw new HttpError(400, 'Use a password with at least 8 characters.');
+    if (next.length > 200) throw new HttpError(400, 'That password is too long.');
+
+    const key = 'pwcheck:' + me.id;
+    if (tooManyFailures(key)) throw new HttpError(429, 'Too many wrong passwords. Wait a few minutes and try again.');
+    const full = await db.get('SELECT password_hash FROM users WHERE id = ?', [me.id]);
+    if (!(await verifyPassword(current, full.password_hash))){
+      noteFailure(key);
+      throw new HttpError(403, 'Your current password is incorrect.');
+    }
+    attempts.delete(key);
+    if (next === current) throw new HttpError(400, 'Choose a password different from your current one.');
+
+    await db.run('UPDATE users SET password_hash = ? WHERE id = ?', [await hashPassword(next), me.id]);
+    const token = parseCookies(req).sid;
+    await db.run('DELETE FROM sessions WHERE user_id = ? AND token_hash != ?', [me.id, sha256(token || '')]);   // sign out other devices
+    await logChange('PASSWORD CHANGED', me.name + ' <' + me.email + '>', me.id);
+    return send(res, 200, { ok: true });
   }
 
   if (pathname === '/api/register' && method === 'POST'){
@@ -461,20 +593,19 @@ async function api(req, res, pathname){
 
     // the answer is always the same, so this form cannot be used to find out who has an account
     const reply = () => send(res, 200, { ok: true });
-    if (!EMAIL_RE.test(email) || email.length > 254) return reply();
-    if (!allow('forgot-mail:' + email, 3, 3600000)) return reply();
+        if (!EMAIL_RE.test(email) || email.length > 254) throw new HttpError(400, 'Enter a valid email address.');
+    if (!allow('forgot-mail:' + email, 3, 3600000)) throw new HttpError(429, 'Too many requests for this email. Try again later.');
+        const user = await db.get('SELECT id, name, email FROM users WHERE email = ?', [email]);
+    if (!user) throw new HttpError(404, 'No account is registered with this email address.');
 
-    const user = await db.get('SELECT id, name, email FROM users WHERE email = ?', [email]);
-    if (user){
-      const token = crypto.randomBytes(32).toString('base64url');
-      await db.run('DELETE FROM password_resets WHERE user_id = ?', [user.id]);   // only the newest link works
-      await db.run('INSERT INTO password_resets (token_hash, user_id, expires_at) VALUES (?, ?, ?)',
-        [sha256(token), user.id, Date.now() + RESET_MINUTES * 60000]);
-      // on a live site set SITE_URL (for example https://yourdomain.com) so the link cannot be tampered with
-      const base = process.env.SITE_URL || ('http://' + (req.headers.host || 'localhost:' + PORT));
-      deliverResetLink(user, base + '/reset.html?token=' + encodeURIComponent(token));
-      await logChange('PASSWORD RESET REQUESTED', user.name + ' <' + user.email + '>', user.id);
-    }
+    const token = crypto.randomBytes(32).toString('base64url');
+    await db.run('DELETE FROM password_resets WHERE user_id = ?', [user.id]);   // only the newest link works
+    await db.run('INSERT INTO password_resets (token_hash, user_id, expires_at) VALUES (?, ?, ?)',
+      [sha256(token), user.id, Date.now() + RESET_MINUTES * 60000]);
+    // on a live site set SITE_URL (for example https://yourdomain.com) so the link cannot be tampered with
+    const base = process.env.SITE_URL || ('http://' + (req.headers.host || 'localhost:' + PORT));
+    deliverResetLink(user, base + '/reset.html?token=' + encodeURIComponent(token));
+    await logChange('PASSWORD RESET REQUESTED', user.name + ' <' + user.email + '>', user.id);
     return reply();
   }
 
@@ -518,16 +649,19 @@ async function api(req, res, pathname){
       throw new HttpError(400, 'Price must be a whole number of pesos (0 or more).');
     }
     const ch = chapterFields(body.chapter || {});
-    const img = parseImage(body.image);   // checked last, so bad forms never leave anything behind
+    const imgs = parseImages(body);   // checked last, so bad forms never leave anything behind
     const id = await db.transaction(async tx => {
-      if (img) await tx.run('INSERT INTO images (name, data) VALUES (?, ?)', [img.name, img.b64]);
+      for (const im of imgs) await tx.run('INSERT INTO images (name, data) VALUES (?, ?)', [im.name, im.b64]);
       const r = await tx.run('INSERT INTO items (name, price, image, created_by) VALUES (?, ?, ?, ?)',
-        [name, price, img ? img.name : null, me.id]);
+        [name, price, imgs.length ? imgs[0].name : null, me.id]);
       const itemId = r.lastInsertRowid;
+      for (let i = 0; i < imgs.length; i++){
+        await tx.run('INSERT INTO item_images (item_id, name, position) VALUES (?, ?, ?)', [itemId, imgs[i].name, i]);
+      }
       await insertChapter(tx, itemId, me.id, me.name, ch);
       return itemId;
     });
-    await logChange('OBJECT LISTED', '#' + id + ' "' + name + '" by ' + me.name + (img ? ' [photo ' + img.name + ']' : ''), me.id);
+    await logChange('OBJECT LISTED', '#' + id + ' "' + name + '" by ' + me.name + (imgs.length ? ' [' + imgs.length + ' photo' + (imgs.length > 1 ? 's' : '') + ']' : ''), me.id);
     await showTables();
     return send(res, 201, { item: (await loadItems(id, me))[0] });
   }
@@ -602,13 +736,15 @@ async function api(req, res, pathname){
     const row = await db.get('SELECT name, image, created_by FROM items WHERE id = ?', [itemId]);
     if (!row) throw new HttpError(404, 'That object no longer exists.');
     const owner = (await loadItems(itemId))[0].ownerId;
+    const photoNames = (await db.all('SELECT name FROM item_images WHERE item_id = ?', [itemId])).map(p => p.name);
     if (owner !== me.id && me.role !== 'admin') throw new HttpError(403, 'Only the current owner can remove an object.');
     await db.transaction(async tx => {
       await tx.run('DELETE FROM transfers WHERE item_id = ?', [itemId]);
+      await tx.run('DELETE FROM item_images WHERE item_id = ?', [itemId]);
       await tx.run('DELETE FROM chapters WHERE item_id = ?', [itemId]);
       await tx.run('DELETE FROM items WHERE id = ?', [itemId]);
     });
-    await deleteImage(row.image);                               // and its photo
+    for (const n of new Set([row.image, ...photoNames])) await deleteImage(n);   // and all its photos
     await logChange('OBJECT REMOVED', '#' + itemId + ' "' + row.name + '" by ' + me.name + (me.role === 'admin' ? ' (admin)' : ''), me.id);
     if (row.created_by !== me.id) await logChange('OBJECT REMOVED', '#' + itemId + ' "' + row.name + '" was removed by ' + me.name + (me.role === 'admin' ? ' (admin)' : ''), row.created_by);
     await showTables();
@@ -653,6 +789,8 @@ async function api(req, res, pathname){
     if (target.role === 'admin') throw new HttpError(403, 'Admin accounts cannot be deleted here.');
     await db.transaction(async tx => {
       await tx.run('DELETE FROM transfers WHERE from_user_id = ? OR item_id IN (SELECT id FROM items WHERE created_by = ?)', [id, id]);
+      await tx.run('DELETE FROM images WHERE name IN (SELECT name FROM item_images WHERE item_id IN (SELECT id FROM items WHERE created_by = ?))', [id]);
+      await tx.run('DELETE FROM item_images WHERE item_id IN (SELECT id FROM items WHERE created_by = ?)', [id]);
       await tx.run('DELETE FROM images WHERE name IN (SELECT image FROM items WHERE created_by = ? AND image IS NOT NULL)', [id]);
       await tx.run('DELETE FROM chapters WHERE item_id IN (SELECT id FROM items WHERE created_by = ?)', [id]);
       await tx.run('DELETE FROM items WHERE created_by = ?', [id]);    // their objects
@@ -660,6 +798,7 @@ async function api(req, res, pathname){
       await tx.run('DELETE FROM activity WHERE user_id = ?', [id]);    // their history
       await tx.run('DELETE FROM sessions WHERE user_id = ?', [id]);
       await tx.run('DELETE FROM password_resets WHERE user_id = ?', [id]);
+      await tx.run('DELETE FROM images WHERE name IN (SELECT avatar FROM users WHERE id = ? AND avatar IS NOT NULL)', [id]);
       await tx.run('DELETE FROM users WHERE id = ?', [id]);
     });
     await logChange('ACCOUNT DELETED', target.name + ' <' + target.email + '> by ' + me.name + ' (admin)');

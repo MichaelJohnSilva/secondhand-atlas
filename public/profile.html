@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Edit profile | Secondhand Atlas</title>
+<style>
+  :root{
+    --bg:#F5F6F8; --card:#FFFFFF; --text:#1F2933; --muted:#667085;
+    --line:#E4E7EC; --accent:#0F6CBD; --accent-dark:#0B5394; --soft:#EEF2F6;
+    --ok:#1B7A3E; --bad:#B3261E;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);min-height:100vh;
+    font:15px/1.55 'Segoe UI',system-ui,-apple-system,'Helvetica Neue',Arial,sans-serif}
+  h1,h2,p{margin:0}
+  a{color:var(--accent)}
+  a:focus-visible,button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  [hidden]{display:none !important}
+
+  /* top bar */
+  .nav{background:var(--card);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:10}
+  .nav-in{max-width:1040px;margin:0 auto;padding:0 24px;height:56px;display:flex;align-items:center;gap:18px}
+  .brand{font-weight:600;font-size:16px;color:var(--text);text-decoration:none;margin-right:auto}
+  .nav a.link{color:var(--accent);text-decoration:none;font-weight:500;font-size:14px}
+  .nav a.link:hover{color:var(--accent-dark);text-decoration:underline}
+
+  /* buttons */
+  .btn{background:var(--accent);color:#fff;border:1px solid var(--accent);padding:9px 18px;border-radius:6px;
+    font:600 14px 'Segoe UI',system-ui,sans-serif;cursor:pointer}
+  .btn:hover:not(:disabled){background:var(--accent-dark);border-color:var(--accent-dark)}
+  .btn:disabled{opacity:.45;cursor:not-allowed}
+  .btn.outline{background:var(--card);color:var(--text);border:1px solid #CBD2D9}
+  .btn.outline:hover:not(:disabled){background:var(--soft);border-color:#B8C0CA}
+  .btn.small{padding:7px 14px}
+  .btn.danger{background:var(--card);color:var(--bad);border:1px solid #E4B4B0}
+  .btn.danger:hover:not(:disabled){background:var(--bad);color:#fff;border-color:var(--bad)}
+
+  /* page */
+  .wrap{max-width:1040px;margin:0 auto;padding:28px 24px 64px}
+  .crumbs{font-size:13px;color:var(--muted);margin-bottom:12px}
+  .crumbs a{color:var(--muted);text-decoration:none}
+  .crumbs a:hover{color:var(--accent);text-decoration:underline}
+  .head h1{font-size:24px;font-weight:600}
+  .head p{color:var(--muted);margin-top:4px}
+  .layout{display:grid;grid-template-columns:280px minmax(0,1fr);gap:24px;margin-top:24px;align-items:start}
+
+  .card{background:var(--card);border:1px solid var(--line);border-radius:8px;box-shadow:0 1px 2px rgba(16,24,40,.04);padding:24px}
+  .card + .card{margin-top:24px}
+  .card h2{font-size:16px;font-weight:600;padding-bottom:12px;border-bottom:1px solid var(--line)}
+  .card .desc{color:var(--muted);font-size:14px;margin:12px 0 0}
+
+  /* summary card */
+  .summary{text-align:center;position:sticky;top:80px}
+  .avatar{width:120px;height:120px;border-radius:50%;background:var(--soft);color:var(--muted);border:1px solid var(--line);
+    margin:0 auto 14px;display:grid;place-items:center;font:600 38px 'Segoe UI',system-ui,sans-serif;overflow:hidden}
+  .avatar img{width:100%;height:100%;object-fit:cover;display:block}
+  .photo-actions{display:flex;justify-content:center;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+  .photo-actions .btn{padding:7px 14px}
+  #photoMsg{font-size:13.5px;margin-bottom:12px;min-height:0}
+  #photoFile{display:none}
+  .summary h2{font-size:18px;font-weight:600;padding:0;border:0;word-break:break-word}
+  .summary .mail{color:var(--muted);font-size:14px;word-break:break-all;margin-top:2px}
+  .pill{display:inline-block;margin-top:10px;padding:2px 10px;border-radius:4px;background:var(--soft);color:var(--muted);
+    font-size:12px;font-weight:600;letter-spacing:.04em;text-transform:uppercase}
+  .pill.admin{background:var(--text);color:#fff}
+  .since{color:var(--muted);font-size:13.5px;margin-top:12px}
+  .stats{display:grid;grid-template-columns:1fr 1fr;margin-top:18px;padding-top:16px;border-top:1px solid var(--line)}
+  .stat + .stat{border-left:1px solid var(--line)}
+  .stat b{display:block;font-size:24px;font-weight:600;line-height:1.1}
+  .stat span{color:var(--muted);font-size:12.5px}
+
+  /* forms */
+  label{display:block;font-weight:600;font-size:13.5px;margin-top:16px}
+  .field{display:block;width:100%;margin-top:6px;padding:9px 11px;font:15px 'Segoe UI',system-ui,sans-serif;
+    border:1px solid #CBD2D9;border-radius:6px;background:#fff;color:var(--text)}
+  .field:focus{border-color:var(--accent);outline:2px solid rgba(15,108,189,.2);outline-offset:0}
+  .field:disabled{background:var(--soft)}
+  .hint{color:var(--muted);font-size:13px;margin-top:5px}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  .pwrow{position:relative}
+  .pwrow .field{padding-right:68px}
+  .show{position:absolute;right:6px;top:50%;transform:translateY(-50%);margin-top:3px;background:none;border:0;color:var(--accent);
+    font:600 13px 'Segoe UI',system-ui,sans-serif;cursor:pointer;padding:6px}
+  .actions{display:flex;align-items:center;gap:12px;margin-top:22px;padding-top:18px;border-top:1px solid var(--line);flex-wrap:wrap}
+  .msg{font-weight:500;font-size:14px;min-height:1.4em}
+  .msg.ok{color:var(--ok)}
+  .msg.bad{color:var(--bad)}
+
+  /* password strength */
+  .meter{display:flex;gap:4px;margin-top:12px}
+  .meter i{flex:1;height:4px;border-radius:2px;background:var(--line)}
+  .meter[data-s="1"] i:nth-child(1){background:#B3261E}
+  .meter[data-s="2"] i:nth-child(-n+2){background:#D9822B}
+  .meter[data-s="3"] i:nth-child(-n+3){background:#C9A400}
+  .meter[data-s="4"] i{background:var(--ok)}
+  .strength{font-size:13px;color:var(--muted);margin-top:5px;min-height:1.3em}
+
+  .loading{color:var(--muted);padding:40px 0;text-align:center}
+
+  @media (max-width:860px){
+    .layout{grid-template-columns:1fr}
+    .summary{position:static}
+    .grid2{grid-template-columns:1fr}
+    .nav-in{padding:0 16px}
+    .wrap{padding:20px 16px 48px}
+    .card{padding:20px 16px}
+  }
+</style>
+<link rel="stylesheet" href="home-office.css">
+</head>
+<body>
+
+<nav class="nav" aria-label="Main">
+  <div class="nav-in">
+    <a class="brand" href="index.html">Secondhand Atlas</a>
+    <a class="link" href="index.html#explore">Back to the map</a>
+    <button class="btn outline small" id="logoutBtn" type="button">Log out</button>
+  </div>
+</nav>
+
+<main class="wrap">
+  <p class="crumbs"><a href="index.html#explore">Map</a> / Account / Edit profile</p>
+  <div class="head">
+    <h1>Edit profile</h1>
+    <p>Manage your photo, personal details and account security.</p>
+  </div>
+
+  <p class="loading" id="loading">Loading your profile...</p>
+
+  <div class="layout" id="content" hidden>
+
+    <!-- left: summary -->
+    <aside class="card summary" aria-label="Account summary">
+      <div class="avatar" id="avatar"></div>
+      <div class="photo-actions">
+        <button class="btn outline" id="photoBtn" type="button">Upload photo</button>
+        <button class="btn danger" id="removePhoto" type="button" hidden>Remove</button>
+        <input id="photoFile" type="file" accept="image/*">
+      </div>
+      <p class="msg" id="photoMsg" role="status" aria-live="polite"></p>
+      <h2 id="sumName"></h2>
+      <p class="mail" id="sumMail"></p>
+      <span class="pill" id="sumRole"></span>
+      <p class="since" id="sumSince"></p>
+      <div class="stats">
+        <div class="stat"><b id="stItems">0</b><span>Objects listed</span></div>
+        <div class="stat"><b id="stChapters">0</b><span>Chapters written</span></div>
+      </div>
+    </aside>
+
+    <!-- right: forms -->
+    <div>
+      <section class="card" aria-labelledby="h-details">
+        <h2 id="h-details">Personal details</h2>
+        <p class="desc">Your name appears on every chapter you write.</p>
+        <form id="detailsForm" novalidate>
+          <div class="grid2">
+            <div>
+              <label for="name">Full name</label>
+              <input class="field" id="name" autocomplete="name" maxlength="60" required>
+            </div>
+            <div>
+              <label for="email">Email address</label>
+              <input class="field" id="email" type="email" autocomplete="email" maxlength="254" required>
+            </div>
+          </div>
+          <div id="emailBox" hidden>
+            <label for="emailPw">Current password</label>
+            <div class="pwrow">
+              <input class="field" id="emailPw" type="password" autocomplete="current-password" maxlength="200">
+              <button class="show" type="button" data-show="emailPw">Show</button>
+            </div>
+            <p class="hint">Needed to confirm a change of email address.</p>
+          </div>
+          <div class="actions">
+            <button class="btn" id="saveDetails" type="submit" disabled>Save changes</button>
+            <button class="btn outline" id="resetDetails" type="button" hidden>Discard</button>
+            <p class="msg" id="detailsMsg" role="status" aria-live="polite"></p>
+          </div>
+        </form>
+      </section>
+
+      <section class="card" aria-labelledby="h-pass">
+        <h2 id="h-pass">Password</h2>
+        <p class="desc">Use at least 8 characters. Changing it signs you out on your other devices.</p>
+        <form id="passForm" novalidate>
+          <label for="curPw">Current password</label>
+          <div class="pwrow">
+            <input class="field" id="curPw" type="password" autocomplete="current-password" maxlength="200">
+            <button class="show" type="button" data-show="curPw">Show</button>
+          </div>
+          <div class="grid2">
+            <div>
+              <label for="newPw">New password</label>
+              <div class="pwrow">
+                <input class="field" id="newPw" type="password" autocomplete="new-password" maxlength="200">
+                <button class="show" type="button" data-show="newPw">Show</button>
+              </div>
+            </div>
+            <div>
+              <label for="newPw2">Confirm new password</label>
+              <div class="pwrow">
+                <input class="field" id="newPw2" type="password" autocomplete="new-password" maxlength="200">
+                <button class="show" type="button" data-show="newPw2">Show</button>
+              </div>
+            </div>
+          </div>
+          <div class="meter" id="meter" data-s="0" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+          <p class="strength" id="strength"></p>
+          <div class="actions">
+            <button class="btn" id="savePass" type="submit">Update password</button>
+            <p class="msg" id="passMsg" role="status" aria-live="polite"></p>
+          </div>
+        </form>
+      </section>
+    </div>
+  </div>
+</main>
+
+<script src="auth.js"></script>
+<script>
+const $ = id => document.getElementById(id);
+let saved = { name:'', email:'' };
+let currentAvatar = null;
+
+/* ---------- small helpers ---------- */
+function say(id, text, ok){
+  const el = $(id);
+  el.textContent = text || '';
+  el.className = 'msg ' + (text ? (ok ? 'ok' : 'bad') : '');
+}
+const initials = name => String(name).trim().split(/\s+/).slice(0, 2).map(w => w[0] || '').join('').toUpperCase() || '?';
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+
+function fillSummary(user, stats){
+  renderAvatar(user);
+  $('sumName').textContent = user.name;
+  $('sumMail').textContent = user.email;
+  const role = $('sumRole');
+  role.textContent = user.role === 'admin' ? 'Administrator' : 'Member';
+  role.className = 'pill' + (user.role === 'admin' ? ' admin' : '');
+  if (user.createdAt){
+    const d = new Date(user.createdAt);
+    if (!isNaN(d)) $('sumSince').textContent = 'Member since ' + d.toLocaleDateString(undefined, { year:'numeric', month:'long' });
+  }
+  if (stats){
+    $('stItems').textContent = stats.items;
+    $('stChapters').textContent = stats.chapters;
+  }
+}
+
+/* ---------- profile photo ---------- */
+function renderAvatar(user){
+  if ('avatar' in user) currentAvatar = user.avatar || null;
+  const box = $('avatar');
+  if (currentAvatar){
+    box.innerHTML = '<img alt="Your profile photo" src="' + currentAvatar + '">';
+  } else {
+    box.textContent = initials(user.name);
+  }
+  $('removePhoto').hidden = !currentAvatar;
+  $('photoBtn').textContent = currentAvatar ? 'Change photo' : 'Upload photo';
+}
+
+/* centre-crops to a square and shrinks to a small JPEG */
+function cropSquare(file, size = 400){
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      const side = Math.min(img.naturalWidth, img.naturalHeight);
+      const sx = (img.naturalWidth - side) / 2, sy = (img.naturalHeight - side) / 2;
+      const canvas = document.createElement('canvas');
+      canvas.width = canvas.height = size;
+      const ctx = canvas.getContext('2d');
+      ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, size, size);
+      ctx.drawImage(img, sx, sy, side, side, 0, 0, size, size);
+      URL.revokeObjectURL(url);
+      resolve(canvas.toDataURL('image/jpeg', 0.88));
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('That file could not be read as a picture. Try a JPG or PNG.')); };
+    img.src = url;
+  });
+}
+
+$('photoBtn').addEventListener('click', () => $('photoFile').click());
+
+$('photoFile').addEventListener('change', async e => {
+  const file = e.target.files[0];
+  e.target.value = '';
+  if (!file) return;
+  if (!file.type.startsWith('image/')){ say('photoMsg', 'Choose a picture file.'); return; }
+  if (file.size > 25 * 1024 * 1024){ say('photoMsg', 'That picture is too big. Choose one under 25 MB.'); return; }
+  $('photoBtn').disabled = true;
+  say('photoMsg', 'Uploading...', true);
+  try{
+    const data = await cropSquare(file);
+    const r = await Auth.call('POST', '/api/profile/photo', { image: data });
+    renderAvatar({ name: saved.name, avatar: r.avatar });
+    say('photoMsg', 'Profile photo updated.', true);
+  }catch(err){
+    if (err.status === 401){ location.href = 'login.html?next=' + encodeURIComponent('profile.html'); return; }
+    say('photoMsg', err.message);
+  }
+  $('photoBtn').disabled = false;
+});
+
+$('removePhoto').addEventListener('click', async () => {
+  if (!confirm('Remove your profile photo?')) return;
+  try{
+    await Auth.call('DELETE', '/api/profile/photo');
+    renderAvatar({ name: saved.name, avatar: null });
+    say('photoMsg', 'Profile photo removed.', true);
+  }catch(err){
+    if (err.status === 401){ location.href = 'login.html?next=' + encodeURIComponent('profile.html'); return; }
+    say('photoMsg', err.message);
+  }
+});
+
+/* ---------- details form ---------- */
+function detailsChanged(){
+  return $('name').value.trim() !== saved.name || $('email').value.trim().toLowerCase() !== saved.email;
+}
+function refreshDetails(){
+  const changed = detailsChanged();
+  const emailChanged = $('email').value.trim().toLowerCase() !== saved.email;
+  $('saveDetails').disabled = !changed;
+  $('resetDetails').hidden = !changed;
+  $('emailBox').hidden = !emailChanged;
+  if (!emailChanged) $('emailPw').value = '';
+}
+['name', 'email'].forEach(id => $(id).addEventListener('input', () => { say('detailsMsg', ''); refreshDetails(); }));
+
+$('resetDetails').addEventListener('click', () => {
+  $('name').value = saved.name;
+  $('email').value = saved.email;
+  say('detailsMsg', '');
+  refreshDetails();
+});
+
+$('detailsForm').addEventListener('submit', async e => {
+  e.preventDefault();
+  const name = $('name').value.trim();
+  const email = $('email').value.trim().toLowerCase();
+  const emailChanged = email !== saved.email;
+  if (name.length < 2){ say('detailsMsg', 'Enter your name.'); return; }
+  if (!EMAIL_RE.test(email)){ say('detailsMsg', 'Enter a valid email address.'); return; }
+  if (emailChanged && !$('emailPw').value){ say('detailsMsg', 'Enter your current password to change your email.'); return; }
+
+  const btn = $('saveDetails');
+  btn.disabled = true; btn.textContent = 'Saving...';
+  try{
+    const r = await Auth.call('POST', '/api/profile', { name, email, currentPassword: $('emailPw').value });
+    saved = { name:r.user.name, email:r.user.email };
+    $('name').value = saved.name;
+    $('email').value = saved.email;
+    $('emailPw').value = '';
+    fillSummary(r.user);
+    say('detailsMsg', 'Your profile was updated.', true);
+  }catch(err){
+    if (err.status === 401){ location.href = 'login.html?next=' + encodeURIComponent('profile.html'); return; }
+    say('detailsMsg', err.message);
+  }
+  btn.textContent = 'Save changes';
+  refreshDetails();
+});
+
+/* ---------- password form ---------- */
+function strength(pw){
+  if (!pw) return 0;
+  let s = 0;
+  if (pw.length >= 8) s++;
+  if (pw.length >= 12) s++;
+  if (/[a-z]/.test(pw) && /[A-Z]/.test(pw)) s++;
+  if (/\d/.test(pw) && /[^A-Za-z0-9]/.test(pw)) s++;
+  return Math.max(1, Math.min(4, s));
+}
+$('newPw').addEventListener('input', () => {
+  const s = strength($('newPw').value);
+  $('meter').dataset.s = s;
+  $('strength').textContent = s ? ['', 'Weak', 'Fair', 'Good', 'Strong'][s] : '';
+});
+
+$('passForm').addEventListener('submit', async e => {
+  e.preventDefault();
+  const currentPassword = $('curPw').value, newPassword = $('newPw').value;
+  if (!currentPassword){ say('passMsg', 'Enter your current password.'); return; }
+  if (newPassword.length < 8){ say('passMsg', 'Use a new password with at least 8 characters.'); return; }
+  if (newPassword !== $('newPw2').value){ say('passMsg', 'The two new passwords do not match.'); return; }
+
+  const btn = $('savePass');
+  btn.disabled = true; btn.textContent = 'Updating...';
+  try{
+    await Auth.call('POST', '/api/change-password', { currentPassword, newPassword });
+    $('passForm').reset();
+    $('meter').dataset.s = 0; $('strength').textContent = '';
+    say('passMsg', 'Password updated. Other devices were signed out.', true);
+  }catch(err){
+    if (err.status === 401){ location.href = 'login.html?next=' + encodeURIComponent('profile.html'); return; }
+    say('passMsg', err.message);
+  }
+  btn.disabled = false; btn.textContent = 'Update password';
+});
+
+/* show / hide password buttons */
+document.addEventListener('click', e => {
+  const b = e.target.closest('[data-show]');
+  if (!b) return;
+  const inp = $(b.dataset.show);
+  const show = inp.type === 'password';
+  inp.type = show ? 'text' : 'password';
+  b.textContent = show ? 'Hide' : 'Show';
+});
+
+$('logoutBtn').addEventListener('click', async () => {
+  await Auth.logout();
+  location.href = 'index.html';
+});
+
+/* ---------- start ---------- */
+(async () => {
+  await Auth.ready;
+  if (!Auth.user()){ location.href = 'login.html?next=' + encodeURIComponent('profile.html'); return; }
+  try{
+    const r = await Auth.call('GET', '/api/profile');
+    saved = { name:r.user.name, email:r.user.email };
+    $('name').value = saved.name;
+    $('email').value = saved.email;
+    fillSummary(r.user, r.stats);
+    $('loading').hidden = true;
+    $('content').hidden = false;
+    refreshDetails();
+  }catch(err){
+    if (err.status === 401){ location.href = 'login.html?next=' + encodeURIComponent('profile.html'); return; }
+    $('loading').textContent = err.message;
+  }
+})();
+</script>
+</body>
+</html>
