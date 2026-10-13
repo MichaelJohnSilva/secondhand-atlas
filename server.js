@@ -79,8 +79,10 @@ function parseCookies(req){
   return out;
 }
 
+/* maxAgeSeconds = null makes a "session cookie": the browser forgets it when it is closed, so the person is logged out */
 const sessionCookie = (value, maxAgeSeconds) =>
-  `sid=${value}; HttpOnly; SameSite=Lax; Path=/; Max-Age=${maxAgeSeconds}${SECURE ? '; Secure' : ''}`;
+  `sid=${value}; HttpOnly; SameSite=Lax; Path=/${maxAgeSeconds == null ? '' : '; Max-Age=' + maxAgeSeconds}${SECURE ? '; Secure' : ''}`;
+
 
 /* ---------- photos (stored in the database, so they survive restarts) ---------- */
 /* takes "data:image/jpeg;base64,...", checks it really is a JPEG, returns { name, b64 } (nothing is saved yet) */
@@ -129,7 +131,7 @@ async function startSession(res, userId){
   const expires = Date.now() + SESSION_DAYS * 86400000;
   await db.run('INSERT INTO sessions (token_hash, user_id, expires_at) VALUES (?, ?, ?)',
     [sha256(token), userId, expires]);
-  res.setHeader('Set-Cookie', sessionCookie(token, SESSION_DAYS * 86400));
+    res.setHeader('Set-Cookie', sessionCookie(token, null));   // no Max-Age: logs out when the browser is closed
 }
 
 async function currentUser(req){

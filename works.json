@@ -1,0 +1,17 @@
+[
+  {
+    "title": "EquipTrack",
+    "category": "Web app",
+    "year": "2026",
+    "description": "Equipment borrowing and reservation system for school laboratories, with requests, laboratory checking of returned items, and admin penalties.",
+    "tech": [
+      "Node.js",
+      "Express",
+      "Turso",
+      "Render"
+    ],
+    "link": "https://equiptrack-p7vr.onrender.com",
+    "image": "images/equiptrack-icon.svg",
+    "fit": "contain"
+  }
+]
