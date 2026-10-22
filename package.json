@@ -1,13 +1,11 @@
 {
   "name": "secondhand-atlas",
-  "version": "1.0.0",
   "private": true,
-  "main": "server.js",
-  "engines": { "node": ">=20" },
-  "scripts": {
-    "start": "node server.js"
-  },
+  "type": "module",
   "dependencies": {
     "@libsql/client": "^0.15.0"
+  },
+  "devDependencies": {
+    "wrangler": "^4.0.0"
   }
 }
